@@ -4,16 +4,18 @@ const canvas = document.getElementById('webgl')
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(0x000000)
+scene.fog = new THREE.Fog(0x000000, 6, 12)
 
-// Camera
+// Camera (now at center)
 const camera = new THREE.PerspectiveCamera(
-	60,
+	40, // narrow FOV
 	window.innerWidth / window.innerHeight,
 	0.1,
 	100
 )
 
-camera.position.set(0, 2, 6)
+camera.position.set(0, 0, 0)
+camera.lookAt(0, 0, -1)
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -22,31 +24,31 @@ const renderer = new THREE.WebGLRenderer({
 })
 
 renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.setPixelRatio(1) // PSX vibe
+renderer.setPixelRatio(1)
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.6)
 scene.add(ambient)
 
 const directional = new THREE.DirectionalLight(0xffffff, 0.8)
-directional.position.set(5, 10, 5)
+directional.position.set(5, 5, 5)
 scene.add(directional)
 
-// Group to rotate
+// Ring group
 const ringGroup = new THREE.Group()
 scene.add(ringGroup)
 
-// Geometry & Material
+// Geometry material
 const material = new THREE.MeshStandardMaterial({
 	color: 0xaaaaaa,
 	flatShading: true
 })
 
-// Create 4 objects in a ring
-const radius = 5
+const radius = 8
 const count = 4
 
 for (let i = 0; i < count; i++) {
+
 	let geometry
 
 	switch (i) {
@@ -67,47 +69,57 @@ for (let i = 0; i < count; i++) {
 	const mesh = new THREE.Mesh(geometry, material)
 
 	const angle = (i / count) * Math.PI * 2
+
 	mesh.position.x = Math.sin(angle) * radius
 	mesh.position.z = Math.cos(angle) * radius
+
+	// Make objects face inward
+	mesh.lookAt(0, 0, 0)
 
 	ringGroup.add(mesh)
 }
 
-// Rotation State
-let currentIndex = 0
+// Rotation system (step-based)
+let currentRotation = 0
 let targetRotation = 0
 let isAnimating = false
 
-function rotateToIndex(index) {
-	currentIndex = (index + count) % count
-	targetRotation = (currentIndex / count) * Math.PI * 2
+const stepAngle = (Math.PI * 2) / count
+
+function rotate(direction) {
+
+	if (isAnimating) return
+
+	targetRotation += direction * stepAngle
 	isAnimating = true
 }
 
-// Click Navigation
+// Click navigation
 window.addEventListener('click', (e) => {
-	if (isAnimating) return
 
 	if (e.clientX < window.innerWidth / 2) {
-		rotateToIndex(currentIndex - 1)
+		rotate(-1)
 	} else {
-		rotateToIndex(currentIndex + 1)
+		rotate(1)
 	}
 })
 
-// Animation Loop
+// Animation
 function animate() {
+
 	requestAnimationFrame(animate)
 
 	if (isAnimating) {
-		const diff = targetRotation - ringGroup.rotation.y
 
-		ringGroup.rotation.y += diff * 0.1
+		const diff = targetRotation - currentRotation
+		currentRotation += diff * 0.08
 
 		if (Math.abs(diff) < 0.001) {
-			ringGroup.rotation.y = targetRotation
+			currentRotation = targetRotation
 			isAnimating = false
 		}
+
+		ringGroup.rotation.y = currentRotation
 	}
 
 	renderer.render(scene, camera)
