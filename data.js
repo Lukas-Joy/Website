@@ -1,7 +1,6 @@
 /**
  * ============================================================
- * SITE DATA — data.js
- * Edit this file to update all content across the site.
+ * SITE DATA — data.js (Placeholder Text)
  * ============================================================
  */
 
@@ -9,8 +8,8 @@ const SITE_DATA = {
 
   // ── IDENTITY ──────────────────────────────────────────────
   identity: {
-    name: "Lukas Joy",
-    tagline: "Designer · Game Developer · Digital Void Dweller",
+    name: "Lorem Ipsum",
+    tagline: "Designer · Game Developer",
     systemName: "LJSYS v2.0",
   },
 
@@ -18,138 +17,134 @@ const SITE_DATA = {
   about: {
     title: "about.html",
     paragraphs: [
-      "Hi. I'm Lukas Joy.",
-      "Designer and game developer operating somewhere between a CRT monitor and the void. I make games that feel wrong in interesting ways, and brands that look right for all the wrong reasons.",
-      "Currently: open to weird projects. Previously: making weird projects elsewhere.",
-      "I'm drawn to the aesthetics of broken technology, deleted things, and digital spaces that feel like they were authored by someone who forgot they were mortal.",
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+      "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
     ],
-    skills: ["GAME DESIGN", "BRANDING", "3D", "UI/UX", "PSX AESTHETIC", "MOTION", "GODOT", "UNITY"],
+    skills: ["LOREM", "IPSUM", "DOLOR", "SIT AMET", "CONSECTETUR", "ADIPISCING"],
   },
 
   // ── CONTACT / LINKS ───────────────────────────────────────
   contact: {
     title: "contact.txt",
-    email: "lukas@lukasjoy.com",
+    email: "lorem@ipsum.com",
     links: [
-      { label: "itch.io",     icon: "🎮", url: "https://lukasjoy.itch.io",           display: "lukasjoy.itch.io" },
-      { label: "YouTube",     icon: "▶",  url: "https://youtube.com/@lukasjoy",       display: "@lukasjoy" },
-      { label: "Instagram",   icon: "◈",  url: "https://instagram.com/lukasjoy",      display: "@lukasjoy" },
-      { label: "GitHub",      icon: "⌥",  url: "https://github.com/lukasjoy",         display: "github.com/lukasjoy" },
-      { label: "Twitter/X",   icon: "✦",  url: "https://x.com/lukasjoy",              display: "@lukasjoy" },
+      { label: "itch.io", icon: "🎮", url: "https://example.com", display: "example.com" },
+      { label: "YouTube", icon: "▶", url: "https://youtube.com", display: "@example" },
+      { label: "GitHub", icon: "⌥", url: "https://github.com/example", display: "github.com/example" }
     ],
-    note: "Response time: eventually. Timezone: chaotic.",
+    note: "Response time: lorem ipsum.",
   },
 
   // ── CV / RESUME ───────────────────────────────────────────
   cv: {
     title: "CV.pdf",
-    downloadUrl: "#", // Replace with actual PDF URL
+    downloadUrl: "#",
     experience: [
       {
-        role: "Freelance Designer & Developer",
-        company: "Self",
-        period: "2022 — present",
-        description: "Building weird stuff for interesting people. Game dev, brand identity, interactive experiences.",
+        role: "Lorem Role 1",
+        company: "Lorem Company 1",
+        period: "2020 - 2021",
+        description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       },
       {
-        role: "Junior Designer",
-        company: "NEON STUDIO",
-        period: "2020 — 2022",
-        description: "Brand identity, motion graphics, digital experiences for mid-sized tech clients.",
+        role: "Lorem Role 2",
+        company: "Lorem Company 2",
+        period: "2021 - 2022",
+        description: "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
       },
     ],
     education: [
       {
-        degree: "BA Graphic Design",
-        institution: "University of the Arts",
-        year: "2020",
+        degree: "Bachelor of Lorem Ipsum",
+        institution: "University of Dolor Sit",
+        year: "2019",
       },
     ],
     awards: [
-      "RGD Gold Award — Brand Identity, 2024",
-      "LDJAM 54 — Best Aesthetic, 2023",
+      "Lorem Award 1",
+      "Lorem Award 2",
     ],
   },
 
   // ── PROJECTS ──────────────────────────────────────────────
-  // voidPos: [x, y, z] position in 3D space around the monitor
-  // previewType: determines which canvas animation to play
   projects: [
     {
       key: "game1",
-      title: "VOID_RUNNER",
+      title: "LOREM_GAME_1",
       subtitle: "project.exe",
       icon: "🎮",
       year: "2024",
       type: "GAME",
-      tags: ["UNITY", "PSX", "PLATFORMER", "GAME JAM"],
+      tags: ["LOREM", "IPSUM", "GAME", "JAM"],
       voidPos: [-4.8, 1.6, 0.2],
       previewType: "platformer",
-      shortDesc: "PSX-aesthetic platformer with procedurally deleted levels.",
+      shortDesc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       fullDesc: [
-        "A PSX-aesthetic platformer where every level generates from deleted data. The protagonist is a player character who slowly realises she exists inside an uninstalled game.",
-        "Each level is procedurally assembled from corrupted file fragments — platforms that flicker in and out, geometry that remembers being something else.",
-        "Made in 48 hours for LDJAM 54. Won 'Best Aesthetic'.",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
       ],
-      playUrl: "https://lukasjoy.itch.io/void-runner",
+      playUrl: "#",
       platform: "Browser / Windows",
       duration: "~30 min",
     },
     {
       key: "game2",
-      title: "STATIC_FAUNA",
+      title: "LOREM_GAME_2",
       subtitle: "static_fauna.exe",
       icon: "👾",
       year: "2023",
       type: "GAME",
-      tags: ["GODOT", "HORROR", "EXPLORATION"],
+      tags: ["LOREM", "HORROR", "EXPLORATION"],
       voidPos: [4.8, 0.8, -0.3],
       previewType: "horror",
-      shortDesc: "Wildlife photography horror. The wildlife is not what it was.",
+      shortDesc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       fullDesc: [
-        "You photograph wildlife in a national park. At dusk the fauna stops following normal rules of geometry.",
-        "A slow-burn first-person horror game about observation, documentation, and the creeping sense that you are also being documented.",
-        "Playtime ~35 minutes. 4.8★ on itch.io.",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
       ],
-      playUrl: "https://lukasjoy.itch.io/static-fauna",
+      playUrl: "#",
       platform: "Browser / Windows / Mac",
       duration: "~35 min",
     },
     {
       key: "game3",
-      title: "CORRIDOR_NULL",
+      title: "LOREM_GAME_3",
       subtitle: "corridor.exe",
       icon: "🕹️",
       year: "2022",
       type: "GAME",
-      tags: ["UNITY", "WALKING SIM", "BRUTALIST"],
+      tags: ["LOREM", "WALKING SIM", "BRUTALIST"],
       voidPos: [-4.5, -1.4, 0.4],
       previewType: "corridor",
-      shortDesc: "Infinite brutalist office. Meditation on corporate meaninglessness.",
+      shortDesc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       fullDesc: [
-        "Walking sim set inside a brutalist office building that loops infinitely. Each loop the furniture shifts slightly. The exits lead back in.",
-        "A meditation on corporate meaninglessness and the slow horror of routine.",
-        "2.1k plays. Featured on Itch.io front page.",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
       ],
-      playUrl: "https://lukasjoy.itch.io/corridor-null",
+      playUrl: "#",
       platform: "Browser",
       duration: "∞",
     },
     {
       key: "design1",
-      title: "BRAND_NULL",
+      title: "LOREM_DESIGN_1",
       subtitle: "brand_null.pdf",
       icon: "✦",
       year: "2024",
       type: "DESIGN",
-      tags: ["BRANDING", "IDENTITY", "PRINT", "AWARD"],
+      tags: ["BRANDING", "IDENTITY", "PRINT"],
       voidPos: [4.2, -1.8, 0.1],
       previewType: "brand",
-      shortDesc: "Brand identity for a startup that sold nothing. Won gold.",
+      shortDesc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       fullDesc: [
-        "Complete brand identity for a conceptual tech startup whose product was literally nothing. Tagline: \"Experience the Absence.\"",
-        "Full identity system: logo, type system, packaging, website, and a 48-page brand guidelines document for a product that does not exist.",
-        "Won gold at RGD Awards 2024.",
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
       ],
       playUrl: "#",
       platform: "Print / Digital",
