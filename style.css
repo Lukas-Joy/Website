@@ -1,0 +1,527 @@
+/* ============================================================
+   style.css — Lukas Joy Retro Desktop 3D Hub
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Press+Start+2P&display=swap');
+
+/* ── VARIABLES ── */
+:root {
+  --phosphor: #39ff5a;
+  --phosphor-dim: #1d7a2e;
+  --phosphor-faint: rgba(57,255,90,0.06);
+  --phosphor-glow: rgba(57,255,90,0.18);
+  --screen-bg: #030c05;
+  --void: #000204;
+  --amber: #ffb347;
+  --amber-dim: #a06c20;
+  --window-bg: rgba(3,10,5,0.97);
+  --taskbar-h: 26px;
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-vt: 'VT323', monospace;
+}
+
+/* ── RESET ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  font-family: var(--font-vt);
+  color: var(--phosphor);
+}
+
+/* Custom cursor */
+body {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Cpolygon points='0,0 0,11 3,8 5,13 7,12 5,7 9,7' fill='%2339ff5a' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 0 0, auto;
+}
+
+/* ── THREE.JS CANVAS ── */
+#three-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+}
+
+/* ── SCREEN OVERLAY ──
+   Positioned each frame to match the 3D monitor screen via JS.
+   All desktop UI lives inside here.
+*/
+#screen-overlay {
+  position: fixed;
+  z-index: 10;
+  overflow: hidden;
+  /* Dimensions set by JS each frame */
+  transform-origin: top left;
+  /* CRT scanlines */
+  background: var(--screen-bg);
+}
+
+/* CRT scanlines overlay */
+#screen-overlay::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,0.22) 2px, rgba(0,0,0,0.22) 3px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* CRT vignette */
+#screen-overlay::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.65) 100%);
+  pointer-events: none;
+  z-index: 1001;
+}
+
+/* Subtle grid on screen */
+#desktop-bg-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(57,255,90,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,90,0.025) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+/* ── BOOT SCREEN ── */
+#boot-screen {
+  position: absolute; inset: 0;
+  background: #000;
+  z-index: 900;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 14px 16px;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+#boot-screen.hidden {
+  animation: bootFade 0.3s steps(4) forwards;
+}
+@keyframes bootFade { to { opacity: 0; pointer-events: none; } }
+
+.boot-line {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--phosphor);
+  opacity: 0;
+  animation: lineReveal 0.05s forwards;
+  white-space: nowrap;
+}
+.boot-line.ok { color: #fff; }
+.boot-line.dim { color: var(--phosphor-dim); }
+.boot-line.cursor::after {
+  content: '█';
+  animation: blink 0.8s steps(1) infinite;
+}
+@keyframes lineReveal { to { opacity: 1; } }
+@keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+/* ── DESKTOP ── */
+#desktop {
+  position: absolute; inset: 0;
+  bottom: var(--taskbar-h);
+  overflow: hidden;
+  display: none;
+}
+#desktop.visible { display: block; }
+
+/* ── DESKTOP ICONS ── */
+.desk-icon {
+  position: absolute;
+  width: 56px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 2px 5px;
+  border: 1px solid transparent;
+  border-radius: 1px;
+  touch-action: none;
+}
+.desk-icon:hover { border-color: var(--phosphor-dim); background: var(--phosphor-faint); }
+.desk-icon.selected { border-color: var(--phosphor); background: rgba(57,255,90,0.12); }
+.desk-icon.dragging { opacity: 0.7; z-index: 500; }
+
+.desk-icon-img {
+  font-size: 26px;
+  display: block;
+  line-height: 1;
+  filter: drop-shadow(0 0 5px var(--phosphor));
+}
+.desk-icon:hover .desk-icon-img { animation: iconJitter 0.1s steps(1) infinite; }
+@keyframes iconJitter {
+  0%   { transform: translate(0,0); }
+  25%  { transform: translate(-1px, 1px); }
+  50%  { transform: translate(1px, -1px); }
+  75%  { transform: translate(-1px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+
+.desk-icon-label {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--phosphor);
+  margin-top: 4px;
+  line-height: 1.2;
+  text-shadow: 0 0 8px var(--phosphor);
+  word-break: break-all;
+}
+
+/* ── TASKBAR ── */
+#taskbar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: var(--taskbar-h);
+  background: rgba(0,14,4,0.97);
+  border-top: 1px solid var(--phosphor-dim);
+  display: flex; align-items: center;
+  padding: 0 5px;
+  gap: 3px;
+  z-index: 50;
+}
+
+#start-btn {
+  font-family: var(--font-pixel);
+  font-size: 5.5px;
+  color: var(--screen-bg);
+  background: var(--phosphor);
+  border: none;
+  padding: 3px 7px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  line-height: 1.8;
+}
+#start-btn:hover { background: #fff; }
+#start-btn:active { transform: scale(0.95); }
+
+.tb-sep { width: 1px; height: 16px; background: var(--phosphor-dim); margin: 0 2px; }
+
+.tb-icon {
+  font-size: 12px; padding: 2px 4px;
+  cursor: pointer; border: 1px solid transparent;
+  transition: all 0.1s; line-height: 1;
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--phosphor);
+}
+.tb-icon:hover { border-color: var(--phosphor-dim); background: var(--phosphor-faint); }
+.tb-icon.running { color: #fff; border-color: var(--phosphor-dim); }
+
+#taskbar-right { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+#taskbar-clock {
+  font-family: var(--font-mono); font-size: 9px; color: var(--phosphor);
+  padding: 0 5px; border-left: 1px solid var(--phosphor-dim);
+}
+
+/* ── PROJECT.EXE — Full-screen app on monitor ── */
+#project-app {
+  position: absolute; inset: 0;
+  background: var(--screen-bg);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+}
+#project-app.open { display: flex; }
+
+#project-app-titlebar {
+  background: rgba(0,20,6,0.98);
+  border-bottom: 1px solid var(--phosphor-dim);
+  padding: 4px 8px;
+  display: flex; align-items: center;
+  font-family: var(--font-pixel); font-size: 6px;
+  color: var(--phosphor); gap: 6px;
+  flex-shrink: 0;
+}
+#project-app-titlebar .app-title { flex: 1; letter-spacing: 1px; }
+.app-btn {
+  width: 14px; height: 14px; background: var(--screen-bg);
+  border: 1px solid var(--phosphor-dim); cursor: pointer;
+  font-size: 9px; display: flex; align-items: center; justify-content: center;
+  color: var(--phosphor); font-family: var(--font-mono);
+}
+.app-btn:hover { background: rgba(57,255,90,0.15); border-color: var(--phosphor); }
+
+#project-app-body {
+  flex: 1; position: relative; overflow: hidden;
+}
+
+/* Empty state */
+#project-empty {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px;
+}
+#project-empty .empty-title {
+  font-family: var(--font-pixel); font-size: 7px;
+  color: var(--phosphor-dim); letter-spacing: 2px;
+}
+#project-empty .empty-sub {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--phosphor-dim); text-align: center;
+}
+.blink-cursor { animation: blink 1s steps(1) infinite; }
+
+/* Preview state */
+#project-preview {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+}
+#project-preview.visible { display: flex; }
+
+#preview-canvas-wrap {
+  flex: 1; position: relative; overflow: hidden;
+}
+#preview-canvas {
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+  display: block;
+}
+
+#project-preview-bar {
+  padding: 5px 10px;
+  border-top: 1px solid var(--phosphor-dim);
+  background: rgba(0,12,3,0.9);
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--phosphor-dim); flex-shrink: 0;
+}
+#preview-project-title { color: #fff; font-size: 11px; }
+.preview-hint { margin-left: auto; font-size: 9px; animation: blink 1.5s steps(1) infinite; }
+
+/* Info state */
+#project-info {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 16px 18px;
+  overflow-y: auto;
+}
+#project-info.visible { display: flex; }
+#project-info::-webkit-scrollbar { width: 5px; }
+#project-info::-webkit-scrollbar-track { background: transparent; }
+#project-info::-webkit-scrollbar-thumb { background: var(--phosphor-dim); }
+
+#project-info h1 {
+  font-family: var(--font-pixel); font-size: 10px;
+  color: #fff; letter-spacing: 2px; margin-bottom: 4px;
+}
+#project-info .info-year {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--phosphor-dim); margin-bottom: 14px;
+}
+#project-info p {
+  font-family: var(--font-vt); font-size: 15px;
+  color: var(--phosphor); margin-bottom: 8px; line-height: 1.5;
+}
+#project-info .info-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+.itag {
+  border: 1px solid var(--phosphor-dim);
+  padding: 1px 7px; font-family: var(--font-mono);
+  font-size: 9px; color: var(--phosphor-dim);
+}
+#project-info .info-meta {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--phosphor-dim); margin-top: 10px;
+  border-top: 1px solid var(--phosphor-dim); padding-top: 10px;
+}
+#project-info .info-link {
+  display: inline-block; margin-top: 12px;
+  border: 1px solid var(--phosphor); padding: 5px 14px;
+  font-family: var(--font-pixel); font-size: 6px;
+  color: var(--phosphor); text-decoration: none; letter-spacing: 1px;
+}
+#project-info .info-link:hover { background: var(--phosphor); color: var(--screen-bg); }
+.info-back-hint {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--phosphor-dim); margin-top: 14px;
+  animation: blink 1.5s steps(1) infinite;
+}
+
+/* ── POPUP WINDOWS ──
+   Fixed-positioned, can go anywhere on the viewport.
+   Start positioned within monitor screen bounds.
+*/
+#windows-layer {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 500;
+}
+
+.popup-window {
+  position: fixed;
+  background: var(--window-bg);
+  border: 1px solid var(--phosphor-dim);
+  box-shadow: 0 0 0 1px rgba(57,255,90,0.08), 0 0 30px rgba(57,255,90,0.08), 0 20px 60px rgba(0,0,0,0.85);
+  min-width: 260px; max-width: 420px;
+  pointer-events: all;
+  display: none;
+  font-family: var(--font-mono);
+  animation: winOpen 0.1s steps(3);
+  resize: both;
+  overflow: auto;
+  min-height: 160px;
+}
+.popup-window.open { display: block; }
+@keyframes winOpen { 0%{transform:scale(0.92);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+.popup-window.focused { border-color: var(--phosphor); z-index: 600; }
+
+.win-titlebar {
+  background: var(--phosphor-dim);
+  color: #fff;
+  padding: 4px 7px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: grab; user-select: none;
+  font-family: var(--font-pixel); font-size: 6px;
+  letter-spacing: 1px; flex-shrink: 0;
+  position: sticky; top: 0;
+}
+.win-titlebar:active { cursor: grabbing; }
+.popup-window.focused .win-titlebar { background: var(--phosphor); color: var(--screen-bg); }
+
+.win-controls { display: flex; gap: 3px; }
+.wbtn {
+  width: 13px; height: 13px;
+  background: transparent; border: 1px solid rgba(255,255,255,0.4);
+  cursor: pointer; font-size: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: inherit; font-family: var(--font-mono);
+}
+.wbtn:hover { background: rgba(255,255,255,0.2); }
+
+.win-body {
+  padding: 13px 15px;
+  overflow-y: auto;
+}
+.win-body h2 {
+  font-family: var(--font-pixel); font-size: 7px;
+  margin-bottom: 12px; letter-spacing: 2px; color: #fff;
+  text-shadow: 0 0 12px var(--phosphor);
+}
+.win-body p { font-family: var(--font-vt); font-size: 15px; margin-bottom: 8px; line-height: 1.5; }
+.win-body a { color: var(--amber); text-decoration: none; }
+.win-body a:hover { text-decoration: underline; }
+.win-sep { border: none; border-top: 1px solid var(--phosphor-dim); margin: 10px 0; }
+
+.skill-tag {
+  display: inline-block; border: 1px solid var(--phosphor-dim);
+  padding: 1px 7px; font-size: 9px; margin: 2px 2px 2px 0;
+  color: var(--phosphor-dim); font-family: var(--font-mono);
+}
+
+.link-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(57,255,90,0.08);
+  font-family: var(--font-vt); font-size: 15px;
+}
+.link-row .licon { width: 20px; text-align: center; }
+.link-row .llabel { color: var(--phosphor-dim); font-size: 11px; min-width: 60px; font-family: var(--font-mono); }
+
+.cv-entry { margin-bottom: 14px; }
+.cv-entry .cv-role { font-family: var(--font-pixel); font-size: 6.5px; color: #fff; letter-spacing: 1px; }
+.cv-entry .cv-period { font-family: var(--font-mono); font-size: 9px; color: var(--phosphor-dim); margin: 3px 0; }
+.cv-entry .cv-desc { font-family: var(--font-vt); font-size: 14px; color: var(--phosphor); line-height: 1.4; }
+
+.dl-btn {
+  display: inline-block; margin-top: 12px;
+  border: 1px solid var(--phosphor); padding: 5px 14px;
+  font-family: var(--font-pixel); font-size: 6px;
+  color: var(--phosphor); text-decoration: none; letter-spacing: 1px;
+}
+.dl-btn:hover { background: var(--phosphor); color: var(--screen-bg); }
+
+/* ── VOID PROJECT ICONS ──
+   Positioned in the void around the monitor via JS 3D projection.
+*/
+#void-layer {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.void-icon {
+  position: fixed;
+  pointer-events: all;
+  text-align: center;
+  cursor: pointer;
+  display: none;
+  transform: translate(-50%, -50%);
+  transition: filter 0.2s;
+  user-select: none;
+}
+.void-icon.visible { display: block; }
+.void-icon.selected .void-icon-glyph { filter: drop-shadow(0 0 16px var(--phosphor)) brightness(1.3); }
+
+.void-icon-glyph {
+  font-size: 28px;
+  display: block;
+  filter: drop-shadow(0 0 8px var(--phosphor));
+  transition: transform 0.15s;
+  line-height: 1;
+}
+.void-icon:hover .void-icon-glyph { transform: scale(1.2); filter: drop-shadow(0 0 14px var(--phosphor)) brightness(1.2); }
+
+.void-icon-label {
+  font-family: var(--font-pixel); font-size: 5.5px;
+  color: var(--phosphor); margin-top: 5px;
+  letter-spacing: 1px; display: block;
+  text-shadow: 0 0 8px var(--phosphor);
+  white-space: nowrap;
+}
+
+/* ── TOAST NOTIFICATION ── */
+#toast {
+  position: fixed; bottom: 50px; right: 18px;
+  background: var(--window-bg); border: 1px solid var(--amber);
+  color: var(--amber); font-family: var(--font-mono); font-size: 10px;
+  padding: 7px 12px; z-index: 9000;
+  display: none; max-width: 210px; line-height: 1.4;
+  box-shadow: 0 0 20px rgba(255,179,71,0.15);
+}
+
+/* ── GLOBAL CRT FLICKER ── */
+#crt-flicker {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 9999;
+  animation: flicker 12s steps(1) infinite;
+}
+@keyframes flicker {
+  0%,94%,100% { opacity:0; }
+  95% { opacity:0.025; background:#fff; }
+  96% { opacity:0; }
+  97.5% { opacity:0.015; background:#fff; }
+}
+
+/* ── VOID PARTICLES ── */
+#particles {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 2;
+}
+.void-particle {
+  position: absolute; width: 1.5px; height: 1.5px;
+  background: var(--phosphor); border-radius: 50%;
+  animation: particleDrift linear infinite;
+  opacity: 0;
+}
+@keyframes particleDrift {
+  0%   { transform: translateY(0) translateX(0); opacity:0; }
+  8%   { opacity: 0.35; }
+  92%  { opacity: 0.08; }
+  100% { transform: translateY(-100vh) translateX(30px); opacity:0; }
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--phosphor-dim); }

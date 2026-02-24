@@ -1,19 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Lukas Joy — 3D Site</title>
-	<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lukas Joy — Retro Desktop Hub</title>
+  <meta name="description" content="Lukas Joy — Designer & Game Developer. Interactive 3D portfolio.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-	<div id="overlay">
-		<div class="hint">Click left / right side of screen</div>
-	</div>
+  <!-- ── THREE.JS CANVAS (fills viewport, z:0) ── -->
+  <canvas id="three-canvas"></canvas>
 
-	<canvas id="webgl"></canvas>
+  <!-- ── VOID PARTICLE LAYER ── -->
+  <div id="particles"></div>
 
-	<script type="module" src="script.js"></script>
+  <!-- ── VOID PROJECT ICON LAYER (appears when project.exe open) ── -->
+  <div id="void-layer"></div>
+
+  <!-- ── SCREEN OVERLAY (positioned each frame to match 3D monitor screen) ── -->
+  <div id="screen-overlay">
+    <!-- Subtle grid texture -->
+    <div id="desktop-bg-grid"></div>
+
+    <!-- Boot sequence — shown first -->
+    <div id="boot-screen"></div>
+
+    <!-- Desktop environment — revealed after boot -->
+    <div id="desktop">
+
+      <!-- project.exe — full screen app (hidden until launched) -->
+      <div id="project-app">
+        <div id="project-app-titlebar">
+          <span class="app-title">📁 PROJECT.EXE — Lukas Joy Project Catalogue</span>
+          <div style="display:flex;gap:3px">
+            <div class="app-btn" data-action="min"   title="Minimise">_</div>
+            <div class="app-btn" data-action="close" title="Close">✕</div>
+          </div>
+        </div>
+        <div id="project-app-body">
+          <!-- States injected by project-app.js -->
+        </div>
+      </div>
+
+      <!-- Taskbar -->
+      <div id="taskbar"></div>
+
+    </div>
+  </div>
+
+  <!-- ── POPUP WINDOWS LAYER (full viewport, fixed) ── -->
+  <div id="windows-layer"></div>
+
+  <!-- ── TOAST NOTIFICATION ── -->
+  <div id="toast"></div>
+
+  <!-- ── CRT FLICKER ── -->
+  <div id="crt-flicker"></div>
+
+  <!-- ── SCRIPTS ── -->
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Site content database -->
+  <script src="data.js"></script>
+  <!-- Modules (order matters) -->
+  <script src="js/scene.js"></script>
+  <script src="js/windows.js"></script>
+  <script src="js/project-app.js"></script>
+  <script src="js/desktop.js"></script>
+  <script src="js/main.js"></script>
+
 </body>
 </html>
