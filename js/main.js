@@ -32,12 +32,12 @@
             container.style.opacity = '';
             onDone();
           }, 420);
-        }, 700);
+        }, 350);
         return;
       }
 
       var line  = lines[i++];
-      var delay = 110 + Math.random() * 60;
+      var delay = 60 + Math.random() * 30;
 
       // Gap lines
       if (line.style === 'gap') {
@@ -45,7 +45,7 @@
         gap.className = 'boot-line';
         gap.innerHTML = '&nbsp;';
         container.appendChild(gap);
-        setTimeout(next, 30);
+        setTimeout(next, 15);
         return;
       }
 
@@ -55,7 +55,7 @@
         sep.className = 'boot-line dim';
         sep.textContent = line.text;
         container.appendChild(sep);
-        setTimeout(next, 20);
+        setTimeout(next, 10);
         return;
       }
 
@@ -65,7 +65,7 @@
         hdr.className = 'boot-line header';
         hdr.textContent = line.text;
         container.appendChild(hdr);
-        setTimeout(next, 60);
+        setTimeout(next, 30);
         return;
       }
 
@@ -76,7 +76,7 @@
         cur.textContent = line.text;
         container.appendChild(cur);
         container.scrollTop = container.scrollHeight;
-        setTimeout(next, 200);
+        setTimeout(next, 100);
         return;
       }
 
@@ -130,7 +130,7 @@
         el.textContent = prefix + '.'.repeat(maxDots) + '  ' + suffix;
         onDone();
       }
-    }, 18);
+    }, 9);
   }
 
   // ── REVEAL DESKTOP ────────────────────────────────────────

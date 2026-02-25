@@ -13,9 +13,9 @@ var Scene = (function () {
   var projectMeshes = [];  // [{mesh, projKey, rotSpeed}]
 
   // Screen face corners in local monitor space
-  var SCREEN_W   = 3.0;
-  var SCREEN_H   = 2.05;
-  var SCREEN_Z   = 0.208;
+  var SCREEN_W   = 1.65;
+  var SCREEN_H   = 1.45;
+  var SCREEN_Z   = 1;
 
   var localCorners = [
     new THREE.Vector3(-SCREEN_W / 2,  SCREEN_H / 2, SCREEN_Z),
@@ -25,6 +25,11 @@ var Scene = (function () {
   ];
 
   var screenRect = { left: 0, top: 0, width: 0, height: 0 };
+
+  // Monitor mesh configuration
+  var MONITOR_SCALE = 1.4;    // Adjust if mesh needs scaling
+  var MONITOR_ROT_X = 0;
+  var MONITOR_ROT_Y = -Math.PI * 0.5;
 
   // Warm sepia palette for outside-monitor world
   var COL_BG          = 0x14100a;
@@ -76,60 +81,119 @@ var Scene = (function () {
     updateOverlay();
 
     requestAnimationFrame(renderLoop);
+    // initScreenCornerDebug();  // Add this at end of init()
+  }
+
+    // ── DEBUG: VISUAL SCREEN CORNER HELPER ─────────────────────
+  function initScreenCornerDebug() {
+    var debugContainer = document.createElement('div');
+    debugContainer.id = 'screen-debug';
+    debugContainer.style.cssText = 'position:fixed;top:10px;left:10px;background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:11px;padding:10px;z-index:9999;width:350px;max-height:500px;overflow-y:auto;';
+    document.body.appendChild(debugContainer);
+
+    var inputs = {
+      SCREEN_W: SCREEN_W,
+      SCREEN_H: SCREEN_H,
+      SCREEN_Z: SCREEN_Z,
+      ROT_X: MONITOR_ROT_X,
+      ROT_Y: MONITOR_ROT_Y,
+      SCALE: MONITOR_SCALE,
+    };
+
+    function updateDebug() {
+      var html = '<strong>Screen Debug (2D px)</strong><br>';
+      html += 'Screen Rect: ' + screenRect.width.toFixed(0) + 'x' + screenRect.height.toFixed(0) + '<br>';
+      html += '<br><strong>3D Corners (world)</strong><br>';
+      
+      // Show world-space corners for reference
+      localCorners.forEach(function (c, i) {
+        var world = c.clone().applyMatrix4(monitorGroup.matrixWorld);
+        html += 'C' + i + ': (' + world.x.toFixed(2) + ', ' + world.y.toFixed(2) + ', ' + world.z.toFixed(2) + ')<br>';
+      });
+
+      html += '<br>';
+      Object.keys(inputs).forEach(function (key) {
+        html += '<label>' + key + ':<br><input type="number" step="0.1" value="' + inputs[key].toFixed(2) + 
+          '" onchange="window.updateScreenCorners(\'' + key + '\', this.value)" style="width:100%;background:#222;color:#0f0;border:1px solid #0f0;padding:4px;font-family:monospace;"/><br></label>';
+      });
+
+      debugContainer.innerHTML = html;
+    }
+
+    window.inputs = inputs;
+    window.updateDebug = updateDebug;
+    updateDebug();
+
+    window.updateScreenCorners = function (key, value) {
+      inputs[key] = parseFloat(value);
+      SCREEN_W = inputs.SCREEN_W;
+      SCREEN_H = inputs.SCREEN_H;
+      SCREEN_Z = inputs.SCREEN_Z;
+      MONITOR_ROT_X = inputs.ROT_X;
+      MONITOR_ROT_Y = inputs.ROT_Y;
+      MONITOR_SCALE = inputs.SCALE;
+
+      // Apply rotation to mesh children, not the group
+      monitorGroup.children.forEach(function (child) {
+        if (child.userData.isLed) return;  // skip LED
+        child.rotation.x = MONITOR_ROT_X;
+        child.rotation.y = MONITOR_ROT_Y;
+      });
+
+      localCorners = [
+        new THREE.Vector3(-SCREEN_W / 2,  SCREEN_H / 2, SCREEN_Z),
+        new THREE.Vector3( SCREEN_W / 2,  SCREEN_H / 2, SCREEN_Z),
+        new THREE.Vector3(-SCREEN_W / 2, -SCREEN_H / 2, SCREEN_Z),
+        new THREE.Vector3( SCREEN_W / 2, -SCREEN_H / 2, SCREEN_Z),
+      ];
+
+      // Update matrix before recalculating screen rect
+      monitorGroup.updateMatrixWorld(true);
+      updateScreenRect();
+      updateDebug();
+    };
+
+    window.updateScreenCorners('SCREEN_W', inputs.SCREEN_W);
   }
 
   // ── MONITOR ───────────────────────────────────────────────
   function buildMonitor() {
     monitorGroup = new THREE.Group();
 
-    // Slightly lighter bezel so it reads against dark warm bg
-    var bezelMat  = new THREE.MeshLambertMaterial({ color: COL_BEZEL });
-    var innerMat  = new THREE.MeshLambertMaterial({ color: 0x141414 });
-    var screenMat = new THREE.MeshBasicMaterial  ({ color: 0x010a03 });
+    // Load custom monitor mesh instead of building it
+    var loader = new THREE.GLTFLoader();
+    loader.load(
+      'mesh/Display.glb',
+      function (gltf) {
+        var mesh = gltf.scene;
+        mesh.scale.set(MONITOR_SCALE, MONITOR_SCALE, MONITOR_SCALE);
+        // Apply rotation only to the mesh, not the group
+        mesh.rotation.x = MONITOR_ROT_X;
+        mesh.rotation.y = MONITOR_ROT_Y;
+        monitorGroup.add(mesh);
+          
+        // Store original positions for jitter effect if geometry exists
+        mesh.traverse(function (child) {
+          if (child.geometry) storeOrig(child.geometry);
+        });
+      },
+      undefined,
+      function (error) {
+        console.error('Failed to load Display.glb:', error);
+      }
+    );
 
-    // Outer bezel
-    var bezelGeo = new THREE.BoxGeometry(3.8, 2.75, 0.36, 3, 3, 2);
-    storeOrig(bezelGeo);
-    var bezel = new THREE.Mesh(bezelGeo, bezelMat);
-    bezel.userData.jitter = 0.006;
-
-    // Inner recess
-    var recess = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.25, 0.10), innerMat);
-    recess.position.z = 0.13;
-
-    // Screen face (dark green-black; HTML overlay sits on top)
-    var screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), screenMat);
-    screenMesh.position.z = SCREEN_Z;
-
-    // Neck
-    var neckGeo = new THREE.BoxGeometry(0.36, 0.65, 0.20, 1, 2, 1);
-    storeOrig(neckGeo);
-    var neck = new THREE.Mesh(neckGeo, bezelMat);
-    neck.position.set(0, -1.65, -0.04);
-    neck.userData.jitter = 0.004;
-
-    // Base
-    var baseGeo = new THREE.BoxGeometry(1.9, 0.11, 0.70, 2, 1, 2);
-    storeOrig(baseGeo);
-    var base = new THREE.Mesh(baseGeo, bezelMat);
-    base.position.set(0, -2.01, -0.07);
-    base.userData.jitter = 0.003;
-
-    // Power LED
-    var led    = new THREE.Mesh(new THREE.SphereGeometry(0.034, 4, 4), new THREE.MeshBasicMaterial({ color: 0x39ff5a }));
-    led.position.set(1.65, -1.29, 0.20);
+    // Power LED (always add)
+    var led = new THREE.Mesh(
+      new THREE.SphereGeometry(0.034, 4, 4),
+      new THREE.MeshBasicMaterial({ color: 0x39ff5a })
+    );
+    led.position.set(1.7, -1.29, -1.05);
     led.userData.isLed = true;
+    monitorGroup.add(led);
 
-    monitorGroup.add(bezel, recess, screenMesh, neck, base, led);
-    monitorGroup.rotation.x = 0.04;
-    monitorGroup.rotation.y = -0.06;
-    // NO position.y bobbing — monitor is static
-
+    // Don't apply rotation to group — screen corners stay in unrotated space
     threeScene.add(monitorGroup);
-  }
-
-  function storeOrig(geo) {
-    geo.userData.origPos = new Float32Array(geo.attributes.position.array);
   }
 
   // ── STARFIELD (warm sepia dots) ────────────────────────────
@@ -194,11 +258,15 @@ var Scene = (function () {
 
       var mesh = new THREE.Mesh(geo, mat);
       mesh.position.copy(pos);
-      // Isometric tilt — rotX tips the top back so we see it from above-front
-      mesh.rotation.x = -0.38;
+      // Isometric tilt — angle down 10 degrees
+      mesh.rotation.x = 10 * (Math.PI / 180);  // 45 degrees in radians
 
-      var rotSpeed = 0.007 + Math.random() * 0.004;
+      var rotSpeed = (0.007 + Math.random() * 0.004) * (Math.random() > 0.5 ? 1 : -1);
+      var rotSpeedX = (0.003 + Math.random() * 0.003) * (Math.random() > 0.5 ? 1 : -1);
+      var rotSpeedZ = (0.003 + Math.random() * 0.003) * (Math.random() > 0.5 ? 1 : -1);
       mesh.userData.rotSpeed = rotSpeed;
+      mesh.userData.rotSpeedX = rotSpeedX;
+      mesh.userData.rotSpeedZ = rotSpeedZ;
       mesh.userData.projKey  = proj.key;
 
       projectMeshGroup.add(mesh);
@@ -229,9 +297,24 @@ var Scene = (function () {
         // Replace default box with loaded mesh
         projectMeshGroup.remove(defaultMesh);
         var loaded = gltf.scene;
+        
+        // Auto-scale to fit bounding box (0.88 x 0.88 x 0.10)
+        var bbox = new THREE.Box3().setFromObject(loaded);
+        var size = bbox.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z);
+        var scale = 0.88 / maxDim;  // Scale to match default box width
+        loaded.scale.multiplyScalar(scale);
+        
+        // Recenter after scaling
+        bbox.setFromObject(loaded);
+        var center = bbox.getCenter(new THREE.Vector3());
+        loaded.position.sub(center);
+        
         loaded.position.copy(pos);
-        loaded.rotation.x = -0.38;
+        loaded.rotation.x = 10 * (Math.PI / 180);  // 10 degrees initial tilt
         loaded.userData.rotSpeed = defaultMesh.userData.rotSpeed;
+        loaded.userData.rotSpeedX = defaultMesh.userData.rotSpeedX;
+        loaded.userData.rotSpeedZ = defaultMesh.userData.rotSpeedZ;
         loaded.userData.projKey  = proj.key;
         projectMeshGroup.add(loaded);
         // Swap reference in array
@@ -273,12 +356,12 @@ var Scene = (function () {
       overlay.style.left   = minX + 'px';
       overlay.style.top    = minY + 'px';
       overlay.style.width  = (maxX - minX) + 'px';
-      overlay.style.height = (maxY - minY) + 'px';
+      overlay.style.height = (maxY - minY + 26) + 'px';  // Add 26px for taskbar height
     }
     screenRect.left   = minX;
     screenRect.top    = minY;
     screenRect.width  = maxX - minX;
-    screenRect.height = maxY - minY;
+    screenRect.height = maxY - minY + 26;  // Include taskbar height
   }
 
   // ── VOID ICON HTML OVERLAY (project icon labels + click targets) ──
@@ -329,9 +412,11 @@ var Scene = (function () {
       m.material.color.setRGB(0, v, v * 0.12);
     });
 
-    // Rotate project icon meshes around their Y axis (isometric spin)
+    // Rotate project icon meshes on all axes with random speeds/directions
     projectMeshes.forEach(function (mesh) {
-      mesh.rotation.y += mesh.userData.rotSpeed || 0.008;
+      mesh.rotation.x += mesh.userData.rotSpeedX || ((Math.random() > 0.5 ? 1 : -1) * 0.004);
+      mesh.rotation.y += mesh.userData.rotSpeed || (Math.random() > 0.5 ? 0.008 : -0.008);
+      mesh.rotation.z += mesh.userData.rotSpeedZ || ((Math.random() > 0.5 ? 1 : -1) * 0.004);
     });
 
     jitterCnt++;

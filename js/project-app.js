@@ -122,15 +122,15 @@ var ProjectApp = (function () {
       // GIF loaded — display it
       wrap.innerHTML = '';
       var img = document.createElement('img');
-      img.src   = 'gif/' + key + '.gif';
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:block;';
+      img.src   = 'gif/' + key + '.webp';
+      img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:block;';
       wrap.appendChild(img);
     };
     testImg.onerror = function () {
       // No GIF — use canvas animation
       startCanvasPreview(key, proj, wrap);
     };
-    testImg.src = 'gif/' + key + '.gif';
+    testImg.src = 'gif/' + key + '.webp';
   }
 
   function startCanvasPreview(key, proj, wrap) {
