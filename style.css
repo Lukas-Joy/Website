@@ -6,10 +6,10 @@
 
 /* ── VARIABLES ── */
 :root {
-  --phosphor: #39ff5a;
-  --phosphor-dim: #1d7a2e;
-  --phosphor-faint: rgba(57,255,90,0.06);
-  --phosphor-glow: rgba(57,255,90,0.18);
+  --phosphor: #f7d982;
+  --phosphor-dim: #f7d982;
+  --phosphor-faint: rgba(247,217,130,0.06);
+  --phosphor-glow: rgba(247,217,130,0.18);
   --screen-bg: #030c05;
   --void: #000204;
   --amber: #ffb347;
@@ -248,7 +248,7 @@ body {
   font-size: 9px; display: flex; align-items: center; justify-content: center;
   color: var(--phosphor); font-family: var(--font-mono);
 }
-.app-btn:hover { background: rgba(57,255,90,0.15); border-color: var(--phosphor); }
+.app-btn:hover { background: rgba(0, 0, 0, 0.15); border-color: var(--phosphor); }
 
 #project-app-body {
   flex: 1; position: relative; overflow: hidden;

@@ -175,13 +175,13 @@ var ProjectApp = (function () {
 
     g.fillStyle = '#000'; g.fillRect(0, 0, sw, sh);
     g.fillStyle = '#0a1f0d'; g.fillRect(0, sh - 10, sw, 10);
-    g.fillStyle = '#39ff5a20';
+    g.fillStyle = '#f7d982';
     for (var x = 0; x < sw; x += 3) g.fillRect(x, sh - 10, 1, 10);
 
     var sc = (f * 0.4) % sw;
     [{x:6,y:sh-22,w:16},{x:26,y:sh-30,w:12},{x:48,y:sh-20,w:18},{x:70,y:sh-36,w:10}].forEach(function(p) {
       var px = ((p.x - sc) % sw + sw) % sw;
-      g.fillStyle = '#39ff5a'; g.fillRect(px, p.y, p.w, 3);
+      g.fillStyle = '#f7d982'; g.fillRect(px, p.y, p.w, 3);
     });
 
     var cx = ~~(sw * 0.33);
@@ -195,14 +195,14 @@ var ProjectApp = (function () {
     for (var i = 0; i < 5; i++) {
       var bx = ((f * 0.6 + i * 18) % sw);
       var by = ((Math.sin(f * 0.09 + i) + 1) / 2) * (sh - 14);
-      g.fillStyle = '#39ff5a'; g.fillRect(~~bx, ~~by, 1, 1);
+      g.fillStyle = '#f7d982'; g.fillRect(~~bx, ~~by, 1, 1);
     }
     if (f % 9 < 2) for (var n = 0; n < 6; n++) {
-      g.fillStyle = '#39ff5a'; g.fillRect(~~(Math.random() * sw), ~~(Math.random() * sh), 2, 1);
+      g.fillStyle = '#f7d982'; g.fillRect(~~(Math.random() * sw), ~~(Math.random() * sh), 2, 1);
     }
 
     blit(ctx, o.canvas, W, H);
-    ctx.fillStyle = '#39ff5a'; ctx.font = '9px "Share Tech Mono",monospace';
+    ctx.fillStyle = '#f7d982'; ctx.font = '9px "Share Tech Mono",monospace';
     ctx.fillText('VOID_RUNNER', 8, 16);
     ctx.fillText('SCORE: ' + pad6(f * 31), 8, 28);
   }
@@ -233,7 +233,7 @@ var ProjectApp = (function () {
       g.fillStyle = 'rgba(57,255,90,' + (Math.random() * 0.35) + ')';
       g.fillRect(~~(Math.random() * sw), ~~(Math.random() * sh), ~~(Math.random()*3)+1, 1);
     }
-    g.strokeStyle = '#39ff5a'; g.lineWidth = 1;
+    g.strokeStyle = '#f7d982'; g.lineWidth = 1;
     var m = 4;
     g.beginPath();
     g.moveTo(m,m+5);g.lineTo(m,m);g.lineTo(m+5,m);
@@ -242,7 +242,7 @@ var ProjectApp = (function () {
     g.moveTo(sw-m-5,sh-m);g.lineTo(sw-m,sh-m);g.lineTo(sw-m,sh-m-5);
     g.stroke();
     blit(ctx, o.canvas, W, H);
-    ctx.fillStyle = '#39ff5a'; ctx.font = '9px "Share Tech Mono",monospace';
+    ctx.fillStyle = '#f7d982'; ctx.font = '9px "Share Tech Mono",monospace';
     ctx.fillText('STATIC_FAUNA \u2014 REC', 8, 16);
     ctx.fillStyle = '#cc000099'; ctx.fillRect(W - 22, 6, 10, 10);
   }
@@ -264,7 +264,7 @@ var ProjectApp = (function () {
     }
     g.fillStyle = '#39ff5a15'; g.fillRect(vx - 1, 0, 2, sh);
     blit(ctx, o.canvas, W, H);
-    ctx.fillStyle = '#39ff5a'; ctx.font = '9px "Share Tech Mono",monospace';
+    ctx.fillStyle = '#f7d982'; ctx.font = '9px "Share Tech Mono",monospace';
     ctx.fillText('CORRIDOR_NULL', 8, 16);
     ctx.fillText('LOOP ' + (~~(f / 120) + 1), 8, 28);
   }
@@ -273,18 +273,18 @@ var ProjectApp = (function () {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
     ctx.save(); ctx.translate(W/2, H/2); ctx.rotate(f * 0.004);
     var sz = Math.min(W, H) * 0.26;
-    ctx.strokeStyle = '#39ff5a'; ctx.lineWidth = 1;
+    ctx.strokeStyle = '#f7d982'; ctx.lineWidth = 1;
     ctx.strokeRect(-sz/2, -sz/2, sz, sz);
     ctx.save(); ctx.rotate(Math.PI/4 + f * 0.002);
     var is = sz * 0.54; ctx.strokeRect(-is/2, -is/2, is, is);
     ctx.restore();
-    ctx.fillStyle = '#39ff5a'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#f7d982'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI*2); ctx.fill();
     ctx.restore();
     var fs = Math.max(8, ~~(W * 0.038));
-    ctx.fillStyle = '#39ff5a'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#f7d982'; ctx.textAlign = 'center';
     ctx.font = fs + 'px "Press Start 2P",monospace';
     ctx.fillText('BRAND', W/2, H*0.72);
-    ctx.fillStyle = '#39ff5a44'; ctx.fillText('NULL', W/2, H*0.82);
+    ctx.fillStyle = '#f7d982'; ctx.fillText('NULL', W/2, H*0.82);
     var a = 0.25 + 0.25 * Math.sin(f * 0.035);
     ctx.fillStyle = 'rgba(57,255,90,' + a + ')';
     ctx.font = '10px "Share Tech Mono",monospace';

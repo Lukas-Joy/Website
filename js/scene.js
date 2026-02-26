@@ -71,7 +71,7 @@ var Scene = (function () {
     camera.lookAt(cameraViews.default.target);
 
     // Strong screen glow light — makes monitor bright against warm bg
-    var screenGlow = new THREE.PointLight(0x39ff5a, 3.5, 10);
+    var screenGlow = new THREE.PointLight(0xf7d982, 3.5, 10);
     screenGlow.position.set(0, 0.1, 1.6);
     threeScene.add(screenGlow);
 
@@ -92,7 +92,7 @@ var Scene = (function () {
     updateOverlay();
 
     requestAnimationFrame(renderLoop);
-    // initScreenCornerDebug();  // Add this at end of init()
+    initScreenCornerDebug();  // Add this at end of init()
     // initOverheadLightDebug();   // Uncomment to enable overhead light debug
   }
 
