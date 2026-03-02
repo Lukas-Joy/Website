@@ -17,22 +17,26 @@ var Windows = (function () {
   function init() {
     Object.keys(DEFS).forEach(function (key) {
       var def = DEFS[key];
-      var win = makeWin(key, def.title, def.build());
+      var build = def.build();
+      var win = makeWin(key, build.title, build.html);
       document.getElementById('windows-layer').appendChild(win);
     });
     initDrag();
   }
 
-  function makeWin(key, title, bodyHTML) {
+  function makeWin(key, contentTitle, bodyHTML) {
     var win = document.createElement('div');
     win.className = 'popup-win';
     win.id        = 'win-' + key;
     win.innerHTML =
       '<div class="win-bar">' +
-        '<span class="win-title">' + title + '</span>' +
+        '<span class="win-title">' + contentTitle + '</span>' +
         '<div class="win-btns"><div class="win-btn" onclick="Windows.close(\'' + key + '\')">&#x2715;</div></div>' +
       '</div>' +
-      '<div class="win-body">' + bodyHTML + '</div>';
+      '<div class="win-body-wrap">' +
+        '<div class="win-body" id="winbody-' + key + '">' + bodyHTML + '</div>' +
+        '<div class="win-scrollbar" id="winscroll-' + key + '"></div>' +
+      '</div>';
     win.addEventListener('mousedown', function(){ focus(key); });
     return win;
   }
@@ -50,6 +54,8 @@ var Windows = (function () {
     win.classList.add('open');
     focus(key);
     Desktop.setRunning('ic-' + key, true);
+    // Init dot scrollbar after window is visible
+    setTimeout(function () { initScrollbar(key); }, 50);
   }
 
   function close(key) {
@@ -97,12 +103,85 @@ var Windows = (function () {
     document.addEventListener('mouseup', function(){ _drag = null; });
   }
 
+  // ── DOT SCROLLBAR ─────────────────────────────────────────
+  var DOT_SIZE = 6;   // dot width/height in px
+  var DOT_GAP = 3;    // gap between dots in px
+  var SCROLLBAR_PADDING = 8; // 4px top + 4px bottom padding
+
+  function initScrollbar(key) {
+    var body    = document.getElementById('winbody-' + key);
+    var sb      = document.getElementById('winscroll-' + key);
+    if (!body || !sb) return;
+
+    sb.innerHTML = '';
+
+    // Calculate how many dots fit in the scrollbar height
+    // Each dot is DOT_SIZE px, plus DOT_GAP between them (except after last)
+    // Formula: n dots = (available_height + gap) / (dot_size + gap)
+    var sbHeight = sb.getBoundingClientRect().height;
+    var availableHeight = sbHeight - SCROLLBAR_PADDING;
+    var dotCount = Math.max(1, Math.ceil((availableHeight + DOT_GAP) / (DOT_SIZE + DOT_GAP)));
+
+    // Build dots to fill the scrollbar
+    var dots = [];
+    for (var i = 0; i < dotCount; i++) {
+      var d = document.createElement('div');
+      d.className = 'scrollbar-dot';
+      sb.appendChild(d);
+      dots.push(d);
+    }
+
+    function updateDots() {
+      var scrollRatio   = body.scrollTop / (body.scrollHeight - body.clientHeight || 1);
+      var thumbSize     = Math.max(1, Math.round(dotCount * (body.clientHeight / (body.scrollHeight || 1))));
+      var thumbStart    = Math.round(scrollRatio * (dotCount - thumbSize));
+
+      dots.forEach(function (dot, idx) {
+        if (idx >= thumbStart && idx < thumbStart + thumbSize) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    // Scrollbar drag-to-scroll
+    var draggingSB = false;
+    sb.addEventListener('mousedown', function (e) {
+      draggingSB = true;
+      scrollFromMouse(e);
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!draggingSB) return;
+      scrollFromMouse(e);
+    });
+    document.addEventListener('mouseup', function () { draggingSB = false; });
+
+    function scrollFromMouse(e) {
+      var rect  = sb.getBoundingClientRect();
+      var ratio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      body.scrollTop = ratio * (body.scrollHeight - body.clientHeight);
+    }
+
+    body.addEventListener('scroll', updateDots);
+    updateDots();
+
+    // Also run once after a tick (in case content reflows)
+    setTimeout(updateDots, 100);
+  }
+
+  // ── DRAG ──────────────────────────────────────────────────
+
   // ── BODY BUILDERS ─────────────────────────────────────────
   function buildAbout() {
     var d    = SITE_DATA.about;
     var pars = d.paragraphs.map(function(p){ return '<p>' + p + '</p>'; }).join('');
     var tags = d.skills.map(function(s){ return '<span class="wtag">' + s + '</span>'; }).join('');
-    return '<h2>WHOAMI</h2>' + pars + '<hr class="wsep">' + tags;
+    return {
+      title: 'WHO AM I',
+      html: pars + '<hr class="wsep">' + tags
+    };
   }
 
   function buildContact() {
@@ -114,10 +193,12 @@ var Windows = (function () {
         '<a href="' + l.url + '" target="_blank">' + l.display + '</a>' +
       '</div>';
     }).join('');
-    return '<h2>FIND ME</h2>' +
-      '<p>&#x2709; <a href="mailto:' + d.email + '">' + d.email + '</a></p>' +
-      rows +
-      '<p class="wnote">' + d.note + '</p>';
+    return {
+      title: 'FIND ME',
+      html: '<p>&#x2709; <a href="mailto:' + d.email + '">' + d.email + '</a></p>' +
+        rows +
+        '<p class="wnote">' + d.note + '</p>'
+    };
   }
 
   function buildCV() {
@@ -132,10 +213,13 @@ var Windows = (function () {
         '<div class="cv-period">' + e.institution + ' &middot; ' + e.year + '</div></div>';
     }).join('');
     var awards = d.awards.map(function(a){ return '<p class="cv-award">&#x2756; ' + a + '</p>'; }).join('');
-    return '<h2>EXPERIENCE</h2>' + exp +
-      '<hr class="wsep"><h2>EDUCATION</h2>' + edu +
-      '<hr class="wsep"><h2>AWARDS</h2>' + awards +
-      '<a href="' + d.downloadUrl + '" class="dl-btn" target="_blank">&#x2193; DOWNLOAD CV.pdf</a>';
+    return {
+      title: 'CV',
+      html: '<h2>EXPERIENCE</h2>' + exp +
+        '<hr class="wsep"><h2>EDUCATION</h2>' + edu +
+        '<hr class="wsep"><h2>AWARDS</h2>' + awards +
+        '<a href="' + d.downloadUrl + '" class="dl-btn" target="_blank">&#x2193; DOWNLOAD CV.pdf</a>'
+    };
   }
 
   return { init:init, open:open, close:close, toggle:toggle };

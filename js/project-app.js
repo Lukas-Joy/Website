@@ -33,6 +33,7 @@ var ProjectApp = (function () {
 
     var info = document.createElement('div');
     info.id  = 'proj-info';
+    info.innerHTML = '<div id="proj-info-content"></div><div id="proj-info-scrollbar"></div>';
 
     body.appendChild(empty);
     body.appendChild(preview);
@@ -298,7 +299,7 @@ var ProjectApp = (function () {
     if (!proj) return;
     var tags  = proj.tags.map(function(t){ return '<span class="itag">' + t + '</span>'; }).join('');
     var paras = proj.fullDesc.map(function(p){ return '<p>' + p + '</p>'; }).join('');
-    document.getElementById('proj-info').innerHTML =
+    document.getElementById('proj-info-content').innerHTML =
       '<h1>' + proj.title + '</h1>' +
       '<div class="info-sub">' + proj.type + ' \u00b7 ' + proj.year + '</div>' +
       paras +
@@ -306,6 +307,69 @@ var ProjectApp = (function () {
       '<div class="info-meta">Platform: ' + proj.platform + '<br>Duration: ' + proj.duration + '</div>' +
       '<a href="' + proj.playUrl + '" target="_blank" class="info-link">\u25ba VIEW PROJECT</a>' +
       '<div class="info-hint blink">[ CLICK ICON AGAIN FOR PREVIEW ]</div>';
+    // Init scrollbar after content is ready
+    setTimeout(function () { initProjInfoScrollbar(); }, 50);
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────
+  var DOT_SIZE = 6;
+  var DOT_GAP = 3;
+  var SCROLLBAR_PADDING = 8;
+
+  function initProjInfoScrollbar() {
+    var content = document.getElementById('proj-info-content');
+    var sb      = document.getElementById('proj-info-scrollbar');
+    if (!content || !sb) return;
+
+    sb.innerHTML = '';
+
+    var sbHeight = sb.getBoundingClientRect().height;
+    var availableHeight = sbHeight - SCROLLBAR_PADDING;
+    var dotCount = Math.max(1, Math.ceil((availableHeight + DOT_GAP) / (DOT_SIZE + DOT_GAP)));
+
+    var dots = [];
+    for (var i = 0; i < dotCount; i++) {
+      var d = document.createElement('div');
+      d.className = 'scrollbar-dot';
+      sb.appendChild(d);
+      dots.push(d);
+    }
+
+    function updateDots() {
+      var scrollRatio   = content.scrollTop / (content.scrollHeight - content.clientHeight || 1);
+      var thumbSize     = Math.max(1, Math.round(dotCount * (content.clientHeight / (content.scrollHeight || 1))));
+      var thumbStart    = Math.round(scrollRatio * (dotCount - thumbSize));
+
+      dots.forEach(function (dot, idx) {
+        if (idx >= thumbStart && idx < thumbStart + thumbSize) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }
+
+    var draggingSB = false;
+    sb.addEventListener('mousedown', function (e) {
+      draggingSB = true;
+      scrollFromMouse(e);
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!draggingSB) return;
+      scrollFromMouse(e);
+    });
+    document.addEventListener('mouseup', function () { draggingSB = false; });
+
+    function scrollFromMouse(e) {
+      var rect  = sb.getBoundingClientRect();
+      var ratio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      content.scrollTop = ratio * (content.scrollHeight - content.clientHeight);
+    }
+
+    content.addEventListener('scroll', updateDots);
+    updateDots();
+    setTimeout(updateDots, 100);
   }
 
   // ── HELPERS ───────────────────────────────────────────────
