@@ -9,6 +9,9 @@
 var Scene = (function () {
 
   var camera, renderer, threeScene, monitorGroup;
+  var screenMeshes = [];      // meshes on monitor screen plane to apply texture to
+  var screenCanvas;           // canvas for rendering 2D content
+  var screenTexture;          // CanvasTexture from canvas
   var projectMeshGroup;    // group holding all 3D project icons
   var projectMeshes = [];  // [{mesh, projKey, rotSpeed}]
   var overheadLight;       // overhead directional light for debug control
@@ -92,6 +95,7 @@ var Scene = (function () {
     overheadLight.position.set(3.30, 4.20, 5.27);
     threeScene.add(overheadLight);
 
+    buildScreenCanvas();  // Create canvas for rendering UI to texture
     buildMonitor();
     buildStarfield();
     buildVoidParticles();
@@ -563,6 +567,50 @@ var Scene = (function () {
     updateUI();
   }
 
+  // ── SCREEN CANVAS & TEXTURE ───────────────────────────────
+  function buildScreenCanvas() {
+    // Create a high-resolution canvas that matches screen-overlay size
+    // Use 2x the viewport size for better quality on the 3D mesh
+    var scale = 2;
+    screenCanvas = document.createElement('canvas');
+    screenCanvas.width = window.innerWidth * scale;
+    screenCanvas.height = window.innerHeight * scale;
+    screenCanvas.style.display = 'none';
+    document.body.appendChild(screenCanvas);
+
+    // Create CanvasTexture (will be updated each frame)
+    screenTexture = new THREE.CanvasTexture(screenCanvas);
+    screenTexture.magFilter = THREE.LinearFilter;
+    screenTexture.minFilter = THREE.LinearFilter;
+  }
+
+  // ── UPDATE SCREEN TEXTURE FROM DOM ─────────────────────────
+  function updateScreenTexture() {
+    if (!screenCanvas || !html2canvas) return;
+
+    var screenOverlay = document.getElementById('screen-overlay');
+    if (!screenOverlay) return;
+
+    // Use html2canvas to render the overlay to our canvas
+    // This captures the current state of all DOM elements
+    html2canvas(screenOverlay, {
+      canvas: screenCanvas,
+      scale: 2,
+      backgroundColor: null,
+      allowTaint: true,
+      useCORS: true,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      windowHeight: window.innerHeight,
+      windowWidth: window.innerWidth,
+    }).then(function(canvas) {
+      // Update the texture
+      screenTexture.needsUpdate = true;
+    }).catch(function(err) {
+      // Silently handle errors (some elements may not render to canvas)
+    });
+  }
+
   // ── MONITOR ───────────────────────────────────────────────
   function buildMonitor() {
     monitorGroup = new THREE.Group();
@@ -583,6 +631,40 @@ var Scene = (function () {
         mesh.traverse(function (child) {
           if (child.geometry) storeOrig(child.geometry);
         });
+
+        // Find and apply screen texture to monitor screen meshes
+        // Look for meshes that would be the display screen
+        mesh.traverse(function (child) {
+          if (child.isMesh) {
+            // Apply screen texture to meshes that look like screen surfaces
+            // (typically named "Screen", "Display", or similar - adjust as needed)
+            var name = child.name.toLowerCase();
+            if (name.includes('screen') || name.includes('display') || 
+                name.includes('face') || name.includes('panel')) {
+              // Create a new material with the canvas texture
+              var screenMaterial = new THREE.MeshBasicMaterial({
+                map: screenTexture,
+                transparent: true
+              });
+              child.material = screenMaterial;
+              screenMeshes.push(child);
+            }
+          }
+        });
+
+        // If no named screen meshes found, apply to first large-ish mesh (fallback)
+        if (screenMeshes.length === 0) {
+          mesh.traverse(function (child) {
+            if (child.isMesh && !child.userData.isLed) {
+              var screenMaterial = new THREE.MeshBasicMaterial({
+                map: screenTexture,
+                transparent: true
+              });
+              child.material = screenMaterial;
+              screenMeshes.push(child);
+            }
+          });
+        }
       },
       undefined,
       function (error) {
@@ -760,6 +842,7 @@ var Scene = (function () {
   }
 
   // ── SCREEN OVERLAY TRACKING ───────────────────────────────
+  // Position the overlay div to match monitor screen bounds for event handling
   function updateOverlay() {
     monitorGroup.updateMatrixWorld(true);
 
@@ -888,6 +971,7 @@ var Scene = (function () {
 
   // ── RENDER LOOP ───────────────────────────────────────────
   var jitterCnt = 0;
+  var texUpdateCnt = 0;
   function renderLoop() {
     requestAnimationFrame(renderLoop);
     var t = Date.now() * 0.001;
@@ -916,6 +1000,10 @@ var Scene = (function () {
 
     jitterCnt++;
     if (jitterCnt % 8 === 0) applyJitter();
+
+    // Update screen texture periodically (every few frames for performance)
+    texUpdateCnt++;
+    if (texUpdateCnt % 3 === 0) updateScreenTexture();
 
     renderer.render(threeScene, camera);
     updateOverlay();

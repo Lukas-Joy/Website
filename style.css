@@ -105,8 +105,11 @@ body {
 
 /* ── SCREEN OVERLAY ───────────────────────────────────────── */
 #screen-overlay {
-  position: fixed; z-index: 10; overflow: hidden;
+  position: fixed;
+  z-index: 10;
+  overflow: hidden;
   background: transparent;
+  pointer-events: all;
 }
 /* CRT scanlines */
 #screen-overlay::before {
