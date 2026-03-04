@@ -18,6 +18,12 @@ var Desktop = (function () {
   var dragging = null, dragOffX = 0, dragOffY = 0;
   var iconStartX = 0, iconStartY = 0, didMove = false;
 
+  // ── SEEDED RANDOM ────────────────────────────────────────
+  function seededRandom(seed) {
+    var x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
   function init() {
     buildIcons();
     buildTaskbar();
@@ -29,13 +35,19 @@ var Desktop = (function () {
   // ── DESKTOP ICONS ─────────────────────────────────────────
   function buildIcons() {
     var desktop = document.getElementById('desktop');
+    var deskRect = desktop.getBoundingClientRect();
+    var iconW = 58;
+    var iconH = 72;
 
-    ICONS.forEach(function (cfg) {
+    ICONS.forEach(function (cfg, idx) {
       var el = document.createElement('div');
       el.className = 'desk-icon';
       el.id        = cfg.id;
-      el.style.left = cfg.x + 'px';
-      el.style.top  = cfg.y + 'px';
+      // Use seeded random for deterministic but scattered positions
+      var randomX = seededRandom(idx * 123.456) * (deskRect.width - iconW);
+      var randomY = seededRandom(idx * 789.012) * (deskRect.height - iconH);
+      el.style.left = randomX + 'px';
+      el.style.top  = randomY + 'px';
 
       // Try custom image, fall back to No_Texture, then emoji
       var imgEl = new Image();
