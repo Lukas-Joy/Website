@@ -1,4 +1,4 @@
-/**
+ /**
  * windows.js — Popup windows (about, contact, cv)
  * Start within monitor bounds; freely draggable + resizable anywhere after.
  * CRT scanline overlay is baked into .popup-win via CSS.
