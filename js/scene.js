@@ -1,4 +1,4 @@
- /**
+/**
  * scene.js — Three.js 3D scene
  *
  * Void outside monitor: warm sepia / dusty beige palette

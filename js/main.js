@@ -1,4 +1,4 @@
- /**
+/**
  * main.js — Bootstrap
  * Boots the Three.js scene, runs the boot sequence on the monitor,
  * then reveals the desktop.

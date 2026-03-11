@@ -1,4 +1,4 @@
- /**
+/**
  * desktop.js — Desktop icons (draggable, confined to desktop area) + taskbar
  *
  * Desktop icons try to load from img/icon-{id}.png

@@ -1,4 +1,4 @@
- /**
+/**
  * project-app.js — project.exe
  *
  * States: empty → preview (click icon) → info (click same) → preview (click again)
