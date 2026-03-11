@@ -47,8 +47,8 @@ var Scene = (function () {
   };
 
   // Screen face corners in local monitor space
-  var SCREEN_W   = 1.65;
-  var SCREEN_H   = 1.45;
+  var SCREEN_W   = 1.95;
+  var SCREEN_H   = 0.65;
   var SCREEN_Z   = 1;
 
   var localCorners = [
@@ -58,6 +58,17 @@ var Scene = (function () {
     new THREE.Vector3( SCREEN_W / 2, -SCREEN_H / 2, SCREEN_Z),
   ];
 
+  // ── OVERLAY (2D UI) DEBUG CONFIG ─────────────────────────
+  var overlayConfig = {
+    screenW: SCREEN_W,
+    screenH: SCREEN_H,
+    screenZ: SCREEN_Z,
+    padBottom: 345,      // extra px added to bottom (taskbar)
+    offsetX: 0,
+    offsetY: -198,       // manual px offset up/down
+    uiScale: 1.0,       // CSS transform scale on the overlay
+  };
+
   var screenRect = { left: 0, top: 0, width: 0, height: 0 };
 
   // Monitor mesh configuration
@@ -65,11 +76,11 @@ var Scene = (function () {
   var MONITOR_ROT_X = 0;
   var MONITOR_ROT_Y = -Math.PI * 0.5;
 
-  // Warm sepia palette for outside-monitor world
-  var COL_BG          = 0x14100a;
-  var COL_AMBIENT     = 0x2a1e10;
-  var COL_STAR        = 0x9a8060;
-  var COL_BEZEL       = 0x222222;
+  // Two-tone palette for 3D world
+  var COL_BG          = 0x000000;
+  var COL_AMBIENT     = 0x000000;
+  var COL_STAR        = 0xf0c677;
+  var COL_BEZEL       = 0x000000;
 
   // ── Camera view management ─────────────────────────────────
   var cameraViews = {
@@ -443,16 +454,23 @@ var Scene = (function () {
     }
 
     var overlay = document.getElementById('screen-overlay');
+    var oX = overlayConfig.offsetX;
+    var oY = overlayConfig.offsetY;
+    var pad = overlayConfig.padBottom;
+    var w  = maxX - minX;
+    var h  = maxY - minY + pad;
     if (overlay) {
-      overlay.style.left   = minX + 'px';
-      overlay.style.top    = minY + 'px';
-      overlay.style.width  = (maxX - minX) + 'px';
-      overlay.style.height = (maxY - minY + 26) + 'px';  // Add 26px for taskbar height
+      overlay.style.left   = (minX + oX) + 'px';
+      overlay.style.top    = (minY + oY) + 'px';
+      overlay.style.width  = w + 'px';
+      overlay.style.height = h + 'px';
+      overlay.style.transform = 'scale(' + overlayConfig.uiScale + ')';
+      overlay.style.transformOrigin = 'center center';
     }
-    screenRect.left   = minX;
-    screenRect.top    = minY;
-    screenRect.width  = maxX - minX;
-    screenRect.height = maxY - minY + 26;  // Include taskbar height
+    screenRect.left   = minX + oX;
+    screenRect.top    = minY + oY;
+    screenRect.width  = w;
+    screenRect.height = h;
   }
 
   // ── DEBUG POSITIONING PANEL ──────────────────────────────
@@ -464,6 +482,7 @@ var Scene = (function () {
         '<h3>DEBUG POSITIONING</h3>' +
         '<button id="debug-close-btn" title="Close debug panel">✕</button>' +
       '</div>' +
+      '<div class="debug-section-title">MONITOR (3D)</div>' +
       '<div class="debug-controls">' +
         '<div class="debug-group">' +
           '<label>Position X:</label>' +
@@ -496,6 +515,34 @@ var Scene = (function () {
           '<span id="debug-scaleZ-val">1.4</span>' +
         '</div>' +
       '</div>' +
+      '<div class="debug-divider"></div>' +
+      '<div class="debug-section-title">OVERLAY (2D UI)</div>' +
+      '<div class="debug-controls">' +
+        '<div class="debug-group">' +
+          '<label>Screen W:</label>' +
+          '<input type="number" id="debug-screenW" step="0.05" value="' + overlayConfig.screenW + '" class="debug-num">' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Screen H:</label>' +
+          '<input type="number" id="debug-screenH" step="0.05" value="' + overlayConfig.screenH + '" class="debug-num">' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Screen Z (depth):</label>' +
+          '<input type="number" id="debug-screenZ" step="0.05" value="' + overlayConfig.screenZ + '" class="debug-num">' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Bottom Padding (px):</label>' +
+          '<input type="number" id="debug-padBottom" step="1" value="' + overlayConfig.padBottom + '" class="debug-num">' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Offset Y (px):</label>' +
+          '<input type="number" id="debug-offsetY" step="1" value="' + overlayConfig.offsetY + '" class="debug-num">' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>UI Scale:</label>' +
+          '<input type="number" id="debug-uiScale" step="0.05" value="' + overlayConfig.uiScale + '" class="debug-num">' +
+        '</div>' +
+      '</div>' +
       '<div class="debug-output">' +
         '<div class="debug-output-label">Settings:</div>' +
         '<div id="debug-settings-display" class="debug-settings-text"></div>' +
@@ -516,6 +563,30 @@ var Scene = (function () {
       });
     });
 
+    // Overlay controls
+    ['screenW', 'screenH', 'screenZ'].forEach(function(key) {
+      var input = document.getElementById('debug-' + key);
+      input.addEventListener('input', function(e) {
+        overlayConfig[key] = parseFloat(e.target.value) || 0;
+        rebuildLocalCorners();
+        updateDebugDisplay();
+      });
+    });
+    ['padBottom', 'offsetY'].forEach(function(key) {
+      var input = document.getElementById('debug-' + key);
+      input.addEventListener('input', function(e) {
+        overlayConfig[key] = parseInt(e.target.value) || 0;
+        updateDebugDisplay();
+      });
+    });
+    (function() {
+      var input = document.getElementById('debug-uiScale');
+      input.addEventListener('input', function(e) {
+        overlayConfig.uiScale = parseFloat(e.target.value) || 1;
+        updateDebugDisplay();
+      });
+    })();
+
     document.getElementById('debug-copy-btn').addEventListener('click', copyDebugSettings);
     updateDebugDisplay();
   }
@@ -531,21 +602,39 @@ var Scene = (function () {
     }
   }
 
+  function rebuildLocalCorners() {
+    var w = overlayConfig.screenW;
+    var h = overlayConfig.screenH;
+    var z = overlayConfig.screenZ;
+    localCorners[0].set(-w / 2,  h / 2, z);
+    localCorners[1].set( w / 2,  h / 2, z);
+    localCorners[2].set(-w / 2, -h / 2, z);
+    localCorners[3].set( w / 2, -h / 2, z);
+  }
+
   function updateDebugDisplay() {
     var display = document.getElementById('debug-settings-display');
     if (display) {
       display.textContent = 
         'monitorGroup.position: (' + debugConfig.posX.toFixed(2) + ', ' + debugConfig.posY.toFixed(2) + ', ' + debugConfig.posZ.toFixed(2) + ')\n' +
-        'monitorGroup.scale: (' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ')';
+        'monitorGroup.scale: (' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ')\n' +
+        'SCREEN: W=' + overlayConfig.screenW.toFixed(2) + ' H=' + overlayConfig.screenH.toFixed(2) + ' Z=' + overlayConfig.screenZ.toFixed(2) + '\n' +
+        'Overlay: pad=' + overlayConfig.padBottom + ' offY=' + overlayConfig.offsetY + ' scale=' + overlayConfig.uiScale.toFixed(2);
     }
   }
 
   function copyDebugSettings() {
     var settings = 
-      '// Position\n' +
+      '// Monitor Position\n' +
       'monitorGroup.position.set(' + debugConfig.posX.toFixed(2) + ', ' + debugConfig.posY.toFixed(2) + ', ' + debugConfig.posZ.toFixed(2) + ');\n' +
-      '// Scale\n' +
-      'monitorGroup.scale.set(' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ');';
+      '// Monitor Scale\n' +
+      'monitorGroup.scale.set(' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ');\n' +
+      '// Screen corners\n' +
+      'var SCREEN_W = ' + overlayConfig.screenW.toFixed(2) + ';\n' +
+      'var SCREEN_H = ' + overlayConfig.screenH.toFixed(2) + ';\n' +
+      'var SCREEN_Z = ' + overlayConfig.screenZ.toFixed(2) + ';\n' +
+      '// Overlay offsets\n' +
+      'padBottom: ' + overlayConfig.padBottom + ', offsetY: ' + overlayConfig.offsetY + ', uiScale: ' + overlayConfig.uiScale.toFixed(2) + ';';
     
     navigator.clipboard.writeText(settings).then(function() {
       if (typeof Desktop !== 'undefined' && Desktop.toast) {
@@ -831,7 +920,7 @@ var Scene = (function () {
         snapRes:       { value: 160.0 },   // lower = more jitter
         hasTexture:    { value: texture ? 1.0 : 0.0 },
         baseColor:     { value: new THREE.Color(0x1a2e1d) },
-        ambientLight:  { value: new THREE.Color(0x2a1e10) },
+        ambientLight:  { value: new THREE.Color(0x000000) },
         lightDir:      { value: new THREE.Vector3(0.6, 0.8, 0.5).normalize() },
         lightColor:    { value: new THREE.Color(0xffffff) },
         lightIntensity:{ value: 1.4 },

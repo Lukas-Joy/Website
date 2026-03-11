@@ -43,11 +43,15 @@ var Desktop = (function () {
       var el = document.createElement('div');
       el.className = 'desk-icon';
       el.id        = cfg.id;
-      // Use seeded random for deterministic but scattered positions
-      var randomX = seededRandom(idx * 123.456) * (deskRect.width - iconW);
-      var randomY = seededRandom(idx * 789.012) * (deskRect.height - iconH);
-      el.style.left = randomX + 'px';
-      el.style.top  = randomY + 'px';
+      // Scattered positions using seeded random
+      var tb = document.getElementById('taskbar');
+      var tbH = tb ? tb.offsetHeight : 0;
+      var maxX = deskRect.width - iconW - 10;
+      var maxY = deskRect.height - iconH - tbH - 6;
+      var posX = 8 + seededRandom(idx * 137.53) * Math.min(maxX, 180);
+      var posY = 8 + seededRandom(idx * 349.71) * maxY * 0.85;
+      el.style.left = posX + 'px';
+      el.style.top  = Math.min(posY, maxY) + 'px';
 
       // Try custom image, fall back to No_Texture, then emoji
       var imgEl = new Image();
@@ -68,7 +72,7 @@ var Desktop = (function () {
         };
         imgEl.src = 'img/No_Texture.webp';
       };
-      imgEl.src = 'img/' + cfg.imgKey + '.png';
+      imgEl.src = 'img/' + cfg.imgKey + '.svg';
 
       var lbl = document.createElement('span');
       lbl.className   = 'desk-icon-lbl';
@@ -123,8 +127,10 @@ var Desktop = (function () {
     var dRect   = desktop.getBoundingClientRect();
     var iW      = dragging.offsetWidth  || 58;
     var iH      = dragging.offsetHeight || 72;
+    var tb = document.getElementById('taskbar');
+    var tbH = tb ? tb.offsetHeight : 0;
     var nx = Math.max(0, Math.min(e.clientX - dRect.left - dragOffX, desktop.clientWidth  - iW));
-    var ny = Math.max(0, Math.min(e.clientY - dRect.top  - dragOffY, desktop.clientHeight - iH));
+    var ny = Math.max(0, Math.min(e.clientY - dRect.top  - dragOffY, desktop.clientHeight - iH - tbH - 6));
     dragging.style.left = nx + 'px';
     dragging.style.top  = ny + 'px';
   }
@@ -133,27 +139,153 @@ var Desktop = (function () {
 
   function activate(cfg) {
     var parts = cfg.action.split(':');
-    if (parts[0] === 'app') ProjectApp.open(); else Windows.open(parts[1]);
+    if (parts[0] === 'app') Windows.open('project'); else Windows.open(parts[1]);
     setRunning(cfg.id, true);
   }
 
   // ── TASKBAR ───────────────────────────────────────────────
+  var startMenuOpen = false;
+
   function buildTaskbar() {
     var tb = document.getElementById('taskbar');
     tb.innerHTML =
-      '<button id="start-btn">&#9654; START</button>' +
-      '<div class="tb-sep"></div>' +
-      '<span class="tb-icon" id="tbi-projects" onclick="ProjectApp.toggle()">&#128193; project.exe</span>' +
-      '<span class="tb-icon" id="tbi-about"    onclick="Windows.toggle(\'about\')">&#128196; about</span>' +
-      '<span class="tb-icon" id="tbi-contact"  onclick="Windows.toggle(\'contact\')">&#128236; contact</span>' +
-      '<span class="tb-icon" id="tbi-cv"       onclick="Windows.toggle(\'cv\')">&#128203; cv</span>' +
-      '<div style="margin-left:auto;display:flex;align-items:center">' +
+      '<div class="tb-section tb-left">' +
+        '<button id="start-btn">&#9654; START</button>' +
+      '</div>' +
+      '<div class="tb-section tb-mid">' +
+        '<div class="tb-icons-box">' +
+          '<span class="tb-icon" id="tbi-projects" onclick="Windows.toggle(\'project\')">project.exe</span>' +
+          '<span class="tb-icon" id="tbi-about"    onclick="Windows.toggle(\'about\')">about</span>' +
+          '<span class="tb-icon" id="tbi-contact"  onclick="Windows.toggle(\'contact\')">contact</span>' +
+          '<span class="tb-icon" id="tbi-cv"       onclick="Windows.toggle(\'cv\')">cv</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tb-section tb-right">' +
         '<div id="taskbar-clock">00:00</div>' +
       '</div>';
 
-    document.getElementById('start-btn').addEventListener('click', function () {
-      toast('START MENU: [under construction since 1994] \u25a0');
+    // Build start menu
+    buildStartMenu();
+
+    document.getElementById('start-btn').addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleStartMenu();
     });
+
+    // Close start menu when clicking elsewhere
+    document.addEventListener('mousedown', function (e) {
+      if (!startMenuOpen) return;
+      var menu = document.getElementById('start-menu');
+      var btn  = document.getElementById('start-btn');
+      if (menu && !menu.contains(e.target) && e.target !== btn) {
+        closeStartMenu();
+      }
+    });
+  }
+
+  function buildStartMenu() {
+    var menu = document.createElement('div');
+    menu.id = 'start-menu';
+
+    // Header
+    var header = '<div class="sm-header">' +
+      '<span class="sm-header-name">' + (SITE_DATA.identity ? SITE_DATA.identity.systemName : 'SYSTEM') + '</span>' +
+    '</div>';
+
+    // Main entries — desktop shortcuts
+    var entries =
+      '<div class="sm-section">' +
+        '<div class="sm-item" data-action="app:project">' +
+          '<span class="sm-icon">&#9632;</span>' +
+          '<span class="sm-label">project.exe</span>' +
+        '</div>' +
+        '<div class="sm-item" data-action="win:about">' +
+          '<span class="sm-icon">&#9632;</span>' +
+          '<span class="sm-label">about.html</span>' +
+        '</div>' +
+        '<div class="sm-item" data-action="win:contact">' +
+          '<span class="sm-icon">&#9632;</span>' +
+          '<span class="sm-label">contact.txt</span>' +
+        '</div>' +
+        '<div class="sm-item" data-action="win:cv">' +
+          '<span class="sm-icon">&#9632;</span>' +
+          '<span class="sm-label">CV.pdf</span>' +
+        '</div>' +
+      '</div>';
+
+    // Projects sub-section
+    var projItems = '';
+    if (SITE_DATA.projects && SITE_DATA.projects.length) {
+      SITE_DATA.projects.forEach(function (proj) {
+        projItems +=
+          '<div class="sm-item sm-proj" data-projkey="' + proj.key + '">' +
+            '<span class="sm-icon">' + proj.icon + '</span>' +
+            '<span class="sm-label">' + proj.title + '</span>' +
+            '<span class="sm-type">' + proj.type + '</span>' +
+          '</div>';
+      });
+    }
+    var projSection =
+      '<div class="sm-section">' +
+        '<div class="sm-section-title">PROJECTS</div>' +
+        projItems +
+      '</div>';
+
+    // Links sub-section
+    var linkItems = '';
+    if (SITE_DATA.contact && SITE_DATA.contact.links) {
+      SITE_DATA.contact.links.forEach(function (lnk) {
+        linkItems +=
+          '<a class="sm-item sm-link" href="' + lnk.url + '" target="_blank" rel="noopener noreferrer">' +
+            '<span class="sm-icon">' + lnk.icon + '</span>' +
+            '<span class="sm-label">' + lnk.label + '</span>' +
+            '<span class="sm-type">&#8599;</span>' +
+          '</a>';
+      });
+    }
+    var linksSection =
+      '<div class="sm-section">' +
+        '<div class="sm-section-title">LINKS</div>' +
+        linkItems +
+      '</div>';
+
+    menu.innerHTML = header + entries + projSection + linksSection;
+
+    // Attach to screen-overlay so it's inside the desktop context
+    var desktop = document.getElementById('desktop');
+    desktop.appendChild(menu);
+
+    // Wire up click handlers for menu items
+    menu.querySelectorAll('.sm-item[data-action]').forEach(function (item) {
+      item.addEventListener('click', function () {
+        var action = item.getAttribute('data-action');
+        var parts = action.split(':');
+        if (parts[0] === 'app') Windows.open('project');
+        else Windows.open(parts[1]);
+        closeStartMenu();
+      });
+    });
+
+    menu.querySelectorAll('.sm-proj[data-projkey]').forEach(function (item) {
+      item.addEventListener('click', function () {
+        Windows.selectProject(item.getAttribute('data-projkey'));
+        closeStartMenu();
+      });
+    });
+  }
+
+  function toggleStartMenu() {
+    startMenuOpen ? closeStartMenu() : openStartMenu();
+  }
+
+  function openStartMenu() {
+    var menu = document.getElementById('start-menu');
+    if (menu) { menu.classList.add('open'); startMenuOpen = true; }
+  }
+
+  function closeStartMenu() {
+    var menu = document.getElementById('start-menu');
+    if (menu) { menu.classList.remove('open'); startMenuOpen = false; }
   }
 
   // ── VOID ICONS ────────────────────────────────────────────
@@ -166,7 +298,7 @@ var Desktop = (function () {
       var hitCircle = document.createElement('div');
       hitCircle.className = 'void-icon-hit';
       el.appendChild(hitCircle);
-      el.addEventListener('click', function () { ProjectApp.selectProject(proj.key); });
+      el.addEventListener('click', function () { Windows.selectProject(proj.key); });
       layer.appendChild(el);
     });
   }

@@ -137,7 +137,6 @@
   function revealDesktop() {
     document.getElementById('desktop').style.display = 'block';
     Windows.init();
-    ProjectApp.init();
     Desktop.init();
   }
 
