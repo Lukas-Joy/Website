@@ -163,20 +163,6 @@ var Desktop = (function () {
       var el  = document.createElement('div');
       el.className = 'void-icon';
       el.id        = 'void-icon-' + proj.key;
-
-      var glyph  = document.createElement('span');
-      glyph.className = 'vi-glyph';
-
-      // Try img/{key}.png as icon texture on label area
-      // (the actual 3D mesh handles the 3D visual; this is just the label + click target)
-      glyph.textContent = proj.icon;
-
-      var label  = document.createElement('span');
-      label.className   = 'vi-label';
-      label.textContent = proj.title;
-
-      el.appendChild(glyph);
-      el.appendChild(label);
       el.addEventListener('click', function () { ProjectApp.selectProject(proj.key); });
       layer.appendChild(el);
     });

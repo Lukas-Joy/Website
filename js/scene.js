@@ -35,6 +35,17 @@ var Scene = (function () {
     blinkIntensity: 1
   };
 
+  // ── DEBUG POSITIONING ────────────────────────────────────
+  var debugMode = false;
+  var debugConfig = {
+    posX: 0,
+    posY: 0,
+    posZ: 0,
+    scaleX: 1.4,
+    scaleY: 1.4,
+    scaleZ: 1.4,
+  };
+
   // Screen face corners in local monitor space
   var SCREEN_W   = 1.65;
   var SCREEN_H   = 1.45;
@@ -109,471 +120,25 @@ var Scene = (function () {
     buildVoidParticles();
     buildProjectIcons();   // 3D floating icons in grid
 
+    buildDebugPanel();     // Build debug positioning panel (hidden by default)
+
     window.addEventListener('resize', onResize);
+
+    // Keyboard shortcut to toggle debug panel (press 'D')
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'd' || e.key === 'D') {
+        toggleDebugPanel();
+      }
+    });
 
     // One synchronous render + overlay update before boot sequence begins
     renderer.render(threeScene, camera);
     updateOverlay();
 
     requestAnimationFrame(renderLoop);
-    // initScreenCornerDebug();  // Uncomment to enable screen corner debug
-    // initOverheadLightDebug();   // Uncomment to enable overhead light debug
-    // initLEDDebug();             // Uncomment to enable LED positioning debug
+
   }
 
-    // ── DEBUG: VISUAL SCREEN CORNER HELPER ─────────────────────
-  function initScreenCornerDebug() {
-    var debugContainer = document.createElement('div');
-    debugContainer.id = 'screen-debug';
-    debugContainer.style.cssText = 'position:fixed;top:10px;left:10px;background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:11px;padding:10px;z-index:9999;width:350px;max-height:500px;overflow-y:auto;';
-    document.body.appendChild(debugContainer);
-
-    var inputs = {
-      SCREEN_W: SCREEN_W,
-      SCREEN_H: SCREEN_H,
-      SCREEN_Z: SCREEN_Z,
-      ROT_X: MONITOR_ROT_X,
-      ROT_Y: MONITOR_ROT_Y,
-      SCALE: MONITOR_SCALE,
-    };
-
-    function updateDebug() {
-      var html = '<strong>Screen Debug (2D px)</strong><br>';
-      html += 'Screen Rect: ' + screenRect.width.toFixed(0) + 'x' + screenRect.height.toFixed(0) + '<br>';
-      html += '<br><strong>3D Corners (world)</strong><br>';
-      
-      // Show world-space corners for reference
-      localCorners.forEach(function (c, i) {
-        var world = c.clone().applyMatrix4(monitorGroup.matrixWorld);
-        html += 'C' + i + ': (' + world.x.toFixed(2) + ', ' + world.y.toFixed(2) + ', ' + world.z.toFixed(2) + ')<br>';
-      });
-
-      html += '<br>';
-      Object.keys(inputs).forEach(function (key) {
-        html += '<label>' + key + ':<br><input type="number" step="0.1" value="' + inputs[key].toFixed(2) + 
-          '" onchange="window.updateScreenCorners(\'' + key + '\', this.value)" style="width:100%;background:#222;color:#0f0;border:1px solid #0f0;padding:4px;font-family:monospace;"/><br></label>';
-      });
-
-      debugContainer.innerHTML = html;
-    }
-
-    window.inputs = inputs;
-    window.updateDebug = updateDebug;
-    updateDebug();
-
-    window.updateScreenCorners = function (key, value) {
-      inputs[key] = parseFloat(value);
-      SCREEN_W = inputs.SCREEN_W;
-      SCREEN_H = inputs.SCREEN_H;
-      SCREEN_Z = inputs.SCREEN_Z;
-      MONITOR_ROT_X = inputs.ROT_X;
-      MONITOR_ROT_Y = inputs.ROT_Y;
-      MONITOR_SCALE = inputs.SCALE;
-
-      // Apply rotation to mesh children, not the group
-      monitorGroup.children.forEach(function (child) {
-        if (child.userData.isLed) return;  // skip LED
-        child.rotation.x = MONITOR_ROT_X;
-        child.rotation.y = MONITOR_ROT_Y;
-      });
-
-      localCorners = [
-        new THREE.Vector3(-SCREEN_W / 2,  SCREEN_H / 2, SCREEN_Z),
-        new THREE.Vector3( SCREEN_W / 2,  SCREEN_H / 2, SCREEN_Z),
-        new THREE.Vector3(-SCREEN_W / 2, -SCREEN_H / 2, SCREEN_Z),
-        new THREE.Vector3( SCREEN_W / 2, -SCREEN_H / 2, SCREEN_Z),
-      ];
-
-      // Update matrix before recalculating screen rect
-      monitorGroup.updateMatrixWorld(true);
-      updateScreenRect();
-      updateDebug();
-    };
-
-    window.updateScreenCorners('SCREEN_W', inputs.SCREEN_W);
-  }
-
-  // ── DEBUG: OVERHEAD LIGHT CONTROL (with rotation + camera views) ──
-  function initOverheadLightDebug() {
-    var debugContainer = document.createElement('div');
-    debugContainer.id = 'overhead-light-debug';
-    debugContainer.style.cssText = [
-      'position:fixed;top:10px;right:10px',
-      'background:rgba(0,0,0,0.92)',
-      'color:#0f0',
-      'font-family:monospace',
-      'font-size:11px',
-      'padding:10px',
-      'z-index:9999',
-      'width:280px',
-      'border:1px solid #0f0',
-      'border-radius:4px',
-      'user-select:none',
-    ].join(';');
-    document.body.appendChild(debugContainer);
-
-    // Light helper sphere so we can see the light position in scene
-    var helperGeo = new THREE.SphereGeometry(0.12, 8, 8);
-    var helperMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true });
-    var lightHelper = new THREE.Mesh(helperGeo, helperMat);
-    lightHelper.position.copy(overheadLight.position);
-    threeScene.add(lightHelper);
-
-    // Spherical coords for the directional light (so rotation makes sense)
-    // elevation = angle from horizontal (0 = side, 90 = straight down)
-    // azimuth   = angle around Y axis
-    var spherical = {
-      radius:    Math.sqrt(3.30*3.30 + 4.20*4.20 + 5.27*5.27), // ~7.35
-      azimuth:   32.0,
-      elevation: 34.0,
-    };
-
-    function sphericalToXYZ(r, azDeg, elDeg) {
-      var az = azDeg * Math.PI / 180;
-      var el = elDeg * Math.PI / 180;
-      return {
-        x: r * Math.cos(el) * Math.sin(az),
-        y: r * Math.sin(el),
-        z: r * Math.cos(el) * Math.cos(az),
-      };
-    }
-
-    function applySpherical() {
-      var p = sphericalToXYZ(spherical.radius, spherical.azimuth, spherical.elevation);
-      overheadLight.position.set(p.x, p.y, p.z);
-      lightHelper.position.copy(overheadLight.position);
-    }
-
-    var params = {
-      INTENSITY: overheadLight.intensity,
-      COLOR: '#ffffff',
-      AZIMUTH:   32.0,
-      ELEVATION: 34.0,
-      RADIUS:    Math.sqrt(3.30*3.30 + 4.20*4.20 + 5.27*5.27),
-      POS_X: 3.30,
-      POS_Y: 4.20,
-      POS_Z: 5.27,
-    };
-
-    // Build a small row of camera view buttons
-    var viewNames = ['default', 'top', 'side', 'front'];
-
-    function updateUI() {
-      var pos = overheadLight.position;
-      var html = '';
-
-      // ── Title + helper toggle ──
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-      html += '<strong style="font-size:12px;">🔦 Overhead Light Debug</strong>';
-      html += '<label style="cursor:pointer;font-size:10px;">';
-      html += '<input type="checkbox" id="dbg-helper-toggle" checked onchange="window._dbgHelperToggle(this.checked)" style="margin-right:3px;">';
-      html += 'Show helper</label>';
-      html += '</div>';
-
-      // ── Live position readout ──
-      html += '<div style="color:#888;margin-bottom:6px;font-size:10px;">';
-      html += 'pos: (' + pos.x.toFixed(2) + ', ' + pos.y.toFixed(2) + ', ' + pos.z.toFixed(2) + ')&nbsp;';
-      html += 'az: ' + spherical.azimuth.toFixed(1) + '° el: ' + spherical.elevation.toFixed(1) + '°</div>';
-
-      // ── Camera view buttons ──
-      html += '<div style="margin-bottom:8px;">';
-      html += '<span style="color:#888;font-size:10px;">Camera view: </span><br style="margin:2px 0;">';
-      viewNames.forEach(function (name) {
-        var active = activeCameraView === name;
-        var btnStyle = [
-          'display:inline-block;margin:2px 2px 2px 0;padding:3px 8px',
-          'border:1px solid ' + (active ? '#0f0' : '#555'),
-          'border-radius:3px',
-          'cursor:pointer',
-          'font-family:monospace;font-size:10px',
-          'background:' + (active ? 'rgba(0,255,0,0.15)' : 'rgba(255,255,255,0.04)'),
-          'color:' + (active ? '#0f0' : '#aaa'),
-        ].join(';');
-        html += '<span style="' + btnStyle + '" onclick="window._dbgCamView(\'' + name + '\')">' + name.toUpperCase() + '</span>';
-      });
-      html += '</div>';
-
-      // ── Rotation sliders (azimuth / elevation / radius) ──
-      html += '<div style="color:#0aa;font-size:10px;margin-bottom:4px;">▸ Rotation</div>';
-      [
-        { key: 'AZIMUTH',   label: 'Azimuth',   min: -180, max: 180, step: 1 },
-        { key: 'ELEVATION', label: 'Elevation', min: 0,    max: 90,  step: 1 },
-        { key: 'RADIUS',    label: 'Radius',    min: 1,    max: 20,  step: 0.5 },
-      ].forEach(function (s) {
-        html += '<label style="display:block;margin-bottom:4px;">' + s.label + ': ';
-        html += '<span id="dbg-val-' + s.key + '" style="color:#fff;">' + params[s.key].toFixed(1) + '</span><br>';
-        html += '<input type="range" min="' + s.min + '" max="' + s.max + '" step="' + s.step + '" value="' + params[s.key] + '"';
-        html += ' oninput="window._dbgLightChange(\'' + s.key + '\',this.value)"';
-        html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-        html += '</label>';
-      });
-
-      // ── Intensity + Colour ──
-      html += '<div style="color:#0aa;font-size:10px;margin:6px 0 4px;">▸ Appearance</div>';
-      html += '<label style="display:block;margin-bottom:4px;">Intensity: ';
-      html += '<span id="dbg-val-INTENSITY" style="color:#fff;">' + params.INTENSITY.toFixed(2) + '</span><br>';
-      html += '<input type="range" min="0" max="5" step="0.05" value="' + params.INTENSITY + '"';
-      html += ' oninput="window._dbgLightChange(\'INTENSITY\',this.value)"';
-      html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-      html += '</label>';
-      html += '<label style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">Colour:';
-      html += '<input type="color" value="' + params.COLOR + '"';
-      html += ' onchange="window._dbgLightChange(\'COLOR\',this.value)"';
-      html += ' style="flex:1;height:24px;cursor:pointer;border:1px solid #0f0;background:none;"/>';
-      html += '</label>';
-
-      // ── Fine XYZ position ──
-      html += '<div style="color:#0aa;font-size:10px;margin:6px 0 4px;">▸ Fine Position</div>';
-      ['POS_X','POS_Y','POS_Z'].forEach(function (key) {
-        html += '<label style="display:block;margin-bottom:4px;">' + key + ': ';
-        html += '<input type="number" step="0.1" value="' + params[key].toFixed(2) + '"';
-        html += ' onchange="window._dbgLightChange(\'' + key + '\',this.value)"';
-        html += ' style="width:100%;background:#111;color:#0f0;border:1px solid #333;padding:3px;font-family:monospace;"/>';
-        html += '</label>';
-      });
-
-      debugContainer.innerHTML = html;
-    }
-
-    // ── Global handlers ──────────────────────────────────────
-    window._dbgHelperToggle = function (on) {
-      lightHelper.visible = on;
-    };
-
-    window._dbgCamView = function (name) {
-      if (!cameraViews[name]) return;
-      activeCameraView = name;
-      // Kick off smooth camera animation
-      camAnim.fromPos.copy(camera.position);
-      camAnim.fromTarget.set(0, 0, 0);   // approximate — always looking at origin
-      camAnim.toPos.copy(cameraViews[name].pos);
-      camAnim.toTarget.copy(cameraViews[name].target);
-      camAnim.progress = 0;
-      camAnim.active = true;
-      updateUI();   // refresh button highlights
-    };
-
-    window._dbgLightChange = function (key, value) {
-      var v = parseFloat(value);
-      params[key] = isNaN(v) ? value : v;
-
-      if (key === 'AZIMUTH')   { spherical.azimuth   = v; applySpherical(); }
-      else if (key === 'ELEVATION') { spherical.elevation = v; applySpherical(); }
-      else if (key === 'RADIUS')    { spherical.radius    = v; applySpherical(); }
-      else if (key === 'INTENSITY') { overheadLight.intensity = v; }
-      else if (key === 'COLOR')     { overheadLight.color.set(value); }
-      else if (key === 'POS_X') { overheadLight.position.x = v; lightHelper.position.x = v;
-                                   // Sync back to spherical
-                                   spherical.azimuth   = Math.atan2(overheadLight.position.x, overheadLight.position.z) * 180 / Math.PI;
-                                   spherical.elevation = Math.atan2(overheadLight.position.y, Math.sqrt(overheadLight.position.x*overheadLight.position.x + overheadLight.position.z*overheadLight.position.z)) * 180 / Math.PI;
-                                   spherical.radius    = overheadLight.position.length(); }
-      else if (key === 'POS_Y') { overheadLight.position.y = v; lightHelper.position.y = v; }
-      else if (key === 'POS_Z') { overheadLight.position.z = v; lightHelper.position.z = v; }
-
-      // Update POS_X/Y/Z params from spherical changes
-      if (['AZIMUTH','ELEVATION','RADIUS'].indexOf(key) !== -1) {
-        params.POS_X = overheadLight.position.x;
-        params.POS_Y = overheadLight.position.y;
-        params.POS_Z = overheadLight.position.z;
-      }
-
-      // Update live value display spans without full re-render
-      var valEl = document.getElementById('dbg-val-' + key);
-      if (valEl) valEl.textContent = (typeof v === 'number' ? v.toFixed(typeof value === 'string' && value.indexOf('.') !== -1 ? 2 : 1) : value);
-
-      // Refresh full UI every so often (cheap enough)
-      updateUI();
-    };
-
-    updateUI();
-  }
-
-  // ── DEBUG: LED POSITION & BLINK CONTROL ──────────────────
-  function initLEDDebug() {
-    var debugContainer = document.createElement('div');
-    debugContainer.id = 'led-debug';
-    debugContainer.style.cssText = [
-      'position:fixed;bottom:10px;left:10px',
-      'background:rgba(0,0,0,0.92)',
-      'color:#0f0',
-      'font-family:monospace',
-      'font-size:11px',
-      'padding:10px',
-      'z-index:9999',
-      'width:280px',
-      'border:1px solid #0f0',
-      'border-radius:4px',
-      'user-select:none',
-      'max-height:400px',
-      'overflow-y:auto',
-    ].join(';');
-    document.body.appendChild(debugContainer);
-
-    // Enlarge LED for debug visibility
-    var originalRadius = ledConfig.radius;
-    ledConfig.radius = 0.2;  // Make it much larger so you can see it
-    if (powerLED) {
-      powerLED.geometry = new THREE.SphereGeometry(ledConfig.radius, 16, 16);
-      powerLED.material = new THREE.MeshBasicMaterial({ 
-        color: 0x00ff00,
-        emissive: 0x00ff00,
-        toneMapped: false
-      });
-    }
-
-    // Add a large wireframe helper sphere around the LED
-    var helperGeo = new THREE.SphereGeometry(0.5, 32, 32);
-    var helperMat = new THREE.MeshBasicMaterial({ 
-      color: 0xff00ff, 
-      wireframe: true,
-      transparent: true,
-      opacity: 0.6,
-      toneMapped: false
-    });
-    var ledHelper = new THREE.Mesh(helperGeo, helperMat);
-    ledHelper.position.copy(powerLED.position);
-    threeScene.add(ledHelper);
-    
-    // Store helper for global access
-    window._ledHelper = ledHelper;
-    
-    console.log('LED Debug activated. LED position:', powerLED.position);
-    console.log('LED visibility:', powerLED.visible);
-    
-    // Store camera/scene for debug zoom function
-    window._dbgCamera = camera;
-    window._dbgScene = threeScene;
-
-    function updateUI() {
-      var html = '';
-      
-      // ── Title ──
-      html += '<div style="margin-bottom:6px;">';
-      html += '<strong style="font-size:12px;">💡 Power LED Debug</strong>';
-      html += '</div>';
-
-      // ── LED World Position ──
-      html += '<div style="background:#1a1a1a;padding:6px;margin-bottom:8px;border:1px solid #0a0;border-radius:2px;font-size:9px;">';
-      html += '<div style="color:#aaa;">World Position:</div>';
-      if (powerLED) {
-        html += '<div style="color:#0f0;">X: ' + powerLED.position.x.toFixed(3) + ' Y: ' + powerLED.position.y.toFixed(3) + ' Z: ' + powerLED.position.z.toFixed(3) + '</div>';
-      }
-      html += '</div>';
-
-      // ── Zoom to LED button ──
-      html += '<button onclick="window._ledDebugZoom()" style="width:100%;padding:6px;margin-bottom:8px;background:#0a0;color:#000;border:none;border-radius:3px;cursor:pointer;font-family:monospace;font-weight:bold;font-size:10px;">ZOOM TO LED</button>';
-
-      // ── Position ──
-      html += '<div style="color:#0aa;font-size:10px;margin-bottom:4px;">▸ Position</div>';
-      ['posX','posY','posZ'].forEach(function (key) {
-        var label = key.replace('pos','');
-        html += '<label style="display:block;margin-bottom:4px;">' + label + ': ';
-        html += '<span id="led-val-' + key + '" style="color:#fff;">' + ledConfig[key].toFixed(3) + '</span><br>';
-        html += '<input type="range" min="-5" max="5" step="0.05" value="' + ledConfig[key] + '"';
-        html += ' oninput="window._ledDebugChange(\'' + key + '\',this.value)"';
-        html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-        html += '</label>';
-      });
-
-      // ── Size ──
-      html += '<div style="color:#0aa;font-size:10px;margin:6px 0 4px;">▸ Size</div>';
-      html += '<label style="display:block;margin-bottom:4px;">Radius: ';
-      html += '<span id="led-val-radius" style="color:#fff;">' + ledConfig.radius.toFixed(3) + '</span><br>';
-      html += '<input type="range" min="0.01" max="0.2" step="0.005" value="' + ledConfig.radius + '"';
-      html += ' oninput="window._ledDebugChange(\'radius\',this.value)"';
-      html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-      html += '</label>';
-
-      // ── Blink ──
-      html += '<div style="color:#0aa;font-size:10px;margin:6px 0 4px;">▸ Blink</div>';
-      html += '<label style="display:block;margin-bottom:4px;">Speed: ';
-      html += '<span id="led-val-blinkSpeed" style="color:#fff;">' + ledConfig.blinkSpeed.toFixed(2) + '</span><br>';
-      html += '<input type="range" min="0.5" max="10" step="0.5" value="' + ledConfig.blinkSpeed + '"';
-      html += ' oninput="window._ledDebugChange(\'blinkSpeed\',this.value)"';
-      html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-      html += '</label>';
-      html += '<label style="display:block;margin-bottom:4px;">Intensity: ';
-      html += '<span id="led-val-blinkIntensity" style="color:#fff;">' + ledConfig.blinkIntensity.toFixed(2) + '</span><br>';
-      html += '<input type="range" min="0" max="1" step="0.05" value="' + ledConfig.blinkIntensity + '"';
-      html += ' oninput="window._ledDebugChange(\'blinkIntensity\',this.value)"';
-      html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-      html += '</label>';
-
-      // ── Color ──
-      html += '<div style="color:#0aa;font-size:10px;margin:6px 0 4px;">▸ Color (RGB)</div>';
-      ['colorR','colorG','colorB'].forEach(function (key) {
-        var label = key.replace('color','');
-        html += '<label style="display:block;margin-bottom:4px;">' + label + ': ';
-        html += '<span id="led-val-' + key + '" style="color:#fff;">' + ledConfig[key].toFixed(2) + '</span><br>';
-        html += '<input type="range" min="0" max="1" step="0.05" value="' + ledConfig[key] + '"';
-        html += ' oninput="window._ledDebugChange(\'' + key + '\',this.value)"';
-        html += ' style="width:100%;accent-color:#0f0;cursor:pointer;"/>';
-        html += '</label>';
-      });
-
-      // ── Copy button ──
-      html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #333;">';
-      html += '<button onclick="window._ledDebugCopy()" style="width:100%;padding:6px;background:#0f0;color:#000;border:none;border-radius:3px;cursor:pointer;font-family:monospace;font-weight:bold;">COPY CONFIG</button>';
-      html += '</div>';
-
-      debugContainer.innerHTML = html;
-    }
-
-    // ── Global handlers ──
-    window._ledDebugZoom = function () {
-      if (!powerLED || !window._dbgCamera) return;
-      // Zoom camera to look at LED from a distance
-      var distance = 2;
-      var ledWorldPos = powerLED.position.clone();
-      window._dbgCamera.position.set(
-        ledWorldPos.x + distance * 0.5,
-        ledWorldPos.y + distance * 0.5,
-        ledWorldPos.z + distance
-      );
-      window._dbgCamera.lookAt(ledWorldPos);
-      activeCameraView = 'custom';
-      console.log('Zoomed to LED at:', ledWorldPos);
-    };
-
-    window._ledDebugChange = function (key, value) {
-      var v = parseFloat(value);
-      ledConfig[key] = isNaN(v) ? value : v;
-
-      // Update LED if it exists
-      if (powerLED) {
-        if (key === 'posX') {
-          powerLED.position.x = v;
-          if (window._ledHelper) window._ledHelper.position.x = v;
-        } else if (key === 'posY') {
-          powerLED.position.y = v;
-          if (window._ledHelper) window._ledHelper.position.y = v;
-        } else if (key === 'posZ') {
-          powerLED.position.z = v;
-          if (window._ledHelper) window._ledHelper.position.z = v;
-        } else if (key === 'radius') {
-          powerLED.geometry = new THREE.SphereGeometry(v, 16, 16);
-        }
-      }
-
-      // Update value display
-      var valEl = document.getElementById('led-val-' + key);
-      if (valEl) valEl.textContent = v.toFixed(key.indexOf('Int') !== -1 ? 2 : 3);
-
-      updateUI();
-    };
-
-    window._ledDebugCopy = function () {
-      var configStr = 'ledConfig: {\n';
-      Object.keys(ledConfig).forEach(function (key) {
-        configStr += '  ' + key + ': ' + ledConfig[key] + ',\n';
-      });
-      configStr += '}';
-      console.log(configStr);
-      alert('LED config copied to console:\n' + configStr);
-    };
-
-    updateUI();
-  }
 
   // ── SCREEN CANVAS & TEXTURE ───────────────────────────────
   function buildScreenCanvas() {
@@ -626,7 +191,7 @@ var Scene = (function () {
     // Load custom monitor mesh instead of building it
     var loader = new THREE.GLTFLoader();
     loader.load(
-      'mesh/Display.glb',
+      'mesh/monitor.glb',
       function (gltf) {
         var mesh = gltf.scene;
         mesh.scale.set(MONITOR_SCALE, MONITOR_SCALE, MONITOR_SCALE);
@@ -660,23 +225,17 @@ var Scene = (function () {
           }
         });
 
-        // If no named screen meshes found, apply to first large-ish mesh (fallback)
+        // Log mesh names for debugging if no screen mesh was found
         if (screenMeshes.length === 0) {
+          console.warn('monitor.glb: no meshes matched screen name patterns. Mesh names:');
           mesh.traverse(function (child) {
-            if (child.isMesh && !child.userData.isLed) {
-              var screenMaterial = new THREE.MeshBasicMaterial({
-                map: screenTexture,
-                transparent: true
-              });
-              child.material = screenMaterial;
-              screenMeshes.push(child);
-            }
+            if (child.isMesh) console.warn('  -', child.name);
           });
         }
       },
       undefined,
       function (error) {
-        console.error('Failed to load Display.glb:', error);
+        console.error('Failed to load monitor.glb:', error);
       }
     );
 
@@ -896,6 +455,117 @@ var Scene = (function () {
     screenRect.height = maxY - minY + 26;  // Include taskbar height
   }
 
+  // ── DEBUG POSITIONING PANEL ──────────────────────────────
+  function buildDebugPanel() {
+    var panel = document.createElement('div');
+    panel.id = 'debug-positioning-panel';
+    panel.innerHTML = 
+      '<div class="debug-header">' +
+        '<h3>DEBUG POSITIONING</h3>' +
+        '<button id="debug-close-btn" title="Close debug panel">✕</button>' +
+      '</div>' +
+      '<div class="debug-controls">' +
+        '<div class="debug-group">' +
+          '<label>Position X:</label>' +
+          '<input type="range" id="debug-posX" min="-5" max="5" step="0.1" value="0">' +
+          '<span id="debug-posX-val">0.0</span>' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Position Y (vertical):</label>' +
+          '<input type="range" id="debug-posY" min="-2" max="2" step="0.1" value="0">' +
+          '<span id="debug-posY-val">0.0</span>' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Position Z (forward/back):</label>' +
+          '<input type="range" id="debug-posZ" min="-3" max="3" step="0.1" value="0">' +
+          '<span id="debug-posZ-val">0.0</span>' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Scale X (width):</label>' +
+          '<input type="range" id="debug-scaleX" min="0.5" max="3" step="0.1" value="1.4">' +
+          '<span id="debug-scaleX-val">1.4</span>' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Scale Y (height):</label>' +
+          '<input type="range" id="debug-scaleY" min="0.5" max="3" step="0.1" value="1.4">' +
+          '<span id="debug-scaleY-val">1.4</span>' +
+        '</div>' +
+        '<div class="debug-group">' +
+          '<label>Scale Z:</label>' +
+          '<input type="range" id="debug-scaleZ" min="0.5" max="3" step="0.1" value="1.4">' +
+          '<span id="debug-scaleZ-val">1.4</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="debug-output">' +
+        '<div class="debug-output-label">Settings:</div>' +
+        '<div id="debug-settings-display" class="debug-settings-text"></div>' +
+        '<button id="debug-copy-btn">Copy Settings</button>' +
+      '</div>';
+    document.body.appendChild(panel);
+
+    // Attach event listeners
+    document.getElementById('debug-close-btn').addEventListener('click', toggleDebugPanel);
+    
+    ['posX', 'posY', 'posZ', 'scaleX', 'scaleY', 'scaleZ'].forEach(function(key) {
+      var input = document.getElementById('debug-' + key);
+      input.addEventListener('input', function(e) {
+        debugConfig[key] = parseFloat(e.target.value);
+        document.getElementById('debug-' + key + '-val').textContent = parseFloat(e.target.value).toFixed(1);
+        updateMonitorDebug();
+        updateDebugDisplay();
+      });
+    });
+
+    document.getElementById('debug-copy-btn').addEventListener('click', copyDebugSettings);
+    updateDebugDisplay();
+  }
+
+  function updateMonitorDebug() {
+    if (monitorGroup) {
+      monitorGroup.position.x = debugConfig.posX;
+      monitorGroup.position.y = debugConfig.posY;
+      monitorGroup.position.z = debugConfig.posZ;
+      monitorGroup.scale.x = debugConfig.scaleX;
+      monitorGroup.scale.y = debugConfig.scaleY;
+      monitorGroup.scale.z = debugConfig.scaleZ;
+    }
+  }
+
+  function updateDebugDisplay() {
+    var display = document.getElementById('debug-settings-display');
+    if (display) {
+      display.textContent = 
+        'monitorGroup.position: (' + debugConfig.posX.toFixed(2) + ', ' + debugConfig.posY.toFixed(2) + ', ' + debugConfig.posZ.toFixed(2) + ')\n' +
+        'monitorGroup.scale: (' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ')';
+    }
+  }
+
+  function copyDebugSettings() {
+    var settings = 
+      '// Position\n' +
+      'monitorGroup.position.set(' + debugConfig.posX.toFixed(2) + ', ' + debugConfig.posY.toFixed(2) + ', ' + debugConfig.posZ.toFixed(2) + ');\n' +
+      '// Scale\n' +
+      'monitorGroup.scale.set(' + debugConfig.scaleX.toFixed(2) + ', ' + debugConfig.scaleY.toFixed(2) + ', ' + debugConfig.scaleZ.toFixed(2) + ');';
+    
+    navigator.clipboard.writeText(settings).then(function() {
+      if (typeof Desktop !== 'undefined' && Desktop.toast) {
+        Desktop.toast('Settings copied to clipboard!');
+      } else {
+        console.log('✓ Settings copied:\n' + settings);
+      }
+    }).catch(function() {
+      console.log('Settings to apply:\n' + settings);
+    });
+  }
+
+  function toggleDebugPanel() {
+    debugMode = !debugMode;
+    var panel = document.getElementById('debug-positioning-panel');
+    if (panel) {
+      panel.style.display = debugMode ? 'block' : 'none';
+    }
+  }
+
   // ── VOID ICON HTML OVERLAY (project icon labels + click targets) ──
   function updateVoidIcons() {
     var projects = SITE_DATA.projects;
@@ -913,6 +583,15 @@ var Scene = (function () {
   }
 
   // ── VERTEX JITTER (PSX wobble) ────────────────────────────
+  function storeOrig(geometry) {
+    // Store original vertex positions for jitter effect
+    if (!geometry || !geometry.attributes || !geometry.attributes.position) return;
+    var pos = geometry.attributes.position;
+    var origPos = new Float32Array(pos.array);
+    geometry.userData = geometry.userData || {};
+    geometry.userData.origPos = origPos;
+  }
+
   function applyJitter() {
     if (!monitorGroup) return;
     monitorGroup.children.forEach(function (mesh) {
@@ -1262,7 +941,7 @@ var Scene = (function () {
     init: init,
     screenRect: screenRect,
     showProjectMeshes: showProjectMeshes,
-    initLEDDebug: initLEDDebug,
+    toggleDebugPanel: toggleDebugPanel,
     // PSX shader uniform access (for potential debug controls)
     psxUniforms: function() { return psxPostMaterial ? psxPostMaterial.uniforms : null; },
     setPSXParam: function(key, val) {

@@ -63,7 +63,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "GAME",
 			tags: ["UNREAL", "EXPERIMENTAL", "3D", "ATMOSPHERIC", "ABSTRACT", "JAM", "SURREAL", "NARRATIVE"],
-			previewType: "abstract",
 			shortDesc: "A surreal ritual about cones, color, and remembering what you were.",
 			fullDesc: [
 				"You were part of the circle once. You remember walking through these overgrown and forgotten places.",
@@ -82,7 +81,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "GAME",
 			tags: ["GODOT", "3D", "ACTION", "JAM", "CASUAL", "STEALTH"],
-			previewType: "action",
 			shortDesc: "A casual 3D stealth prototype focused on fast paced movement and time pressure.",
 			fullDesc: [
 				"In CrackDown, you’ll step into a chaotic world of artistic sabotage in a fast-paced, absurd environment.",
@@ -103,7 +101,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "GAME",
 			tags: ["GODOT", "3D", "PSX", "ATMOSPHERIC", "MEDIVAL", "EXPERIMENTAL", "JAM"],
-			previewType: "horror",
 			shortDesc: "PSX-inspired atmospheric horror experience set in a fragmented space.",
 			fullDesc: [
 				"Apple Crypt is a short-form atmospheric horror game inspired by PSX-era visuals and low-poly environments.",
@@ -122,7 +119,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "PROJECT",
 			tags: ["PHYSICAL", "ARDUINO", "STEAM", "INTERFACE", "3D Printing"],
-			previewType: "interface",
 			shortDesc: "Interactive prototype exploring game library overload",
 			fullDesc: [
 				"Too Many Games is a smart object designed to help Steam users decide which game to play and which achievements to pursue by displaying relevant statistics.",
@@ -141,7 +137,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "PROJECT",
 			tags: ["PHYSICAL", "ARDUINO", "SIMULATION", "3D PRINTING", "INTERACTION"],
-			previewType: "concept",
 			shortDesc: "Interactive prototype simulating conways game of life within a retro form factor.",
 			fullDesc: [
 				"This physical computing project implements Conway's Game of Life on a 16x16 grid of NeoPixel LEDs, using an Arduino Uno, designed with a retro Macintosh SE aesthetic.",
@@ -160,7 +155,6 @@ const SITE_DATA = {
 			year: "2025",
 			type: "PROJECT",
 			tags: ["3D", "SPATIAL", "INTERACTION", "EXPERIMENTAL", "LIGHTING", "3D PRINTING"],
-			previewType: "spatial",
 			shortDesc: "Spatial interaction experiment focused on rotation, gravity, and digital movement.",
 			fullDesc: [
 				"Orbit is a lighting solution interaction project built around the interaction of rotation.",
